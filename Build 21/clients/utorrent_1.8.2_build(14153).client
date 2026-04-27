@@ -1,0 +1,8 @@
+<client name="utorrent 1.8.2 (build 14153)" author="rogeruk" version="1.0" processname="utorrent">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;corrupt=0&amp;key={key}{event}&amp;numwant={numwant}&amp;compact=1&amp;no_peer_id=1</query> 
+  <headers>User-Agent: uTorrent/1820_nl_Accept-Encoding: gzip, deflate_nl_Host: {host}_nl_Cache-Control: no-cache_nl_</headers>
+  <peer_id prefix="-UT1820-I7" type="random" length="10" urlencoding="true" upperCase="false" value=""/>
+  <key type="hex" length="8" urlencoding="false" upperCase="true" value=""/>	
+  <protocol value="HTTP/1.1"/>
+  <hash upperCase="false"/>
+</client>

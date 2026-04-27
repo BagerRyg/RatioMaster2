@@ -1,0 +1,8 @@
+<client name="Halite 0.3.1.1" author="SB-Innovation" version="2.0">  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}{event}&amp;key={key}&amp;compact=1&amp;numwant={numwant}&amp;supportcrypto=1&amp;no_peer_id=1</query> 
+  <headers>Accept-Encoding: gzip_nl_User-Agent: Halite v 0.3.1.1_nl_Host: {host}_nl_</headers>
+  <peer_id prefix="-HL0311-" type="printable" length="12" urlencoding="false"/>
+  <key type="alphanumeric" length="8" urlencoding="false" upperCase="false" value=""/>
+  <protocol value="HTTP/1.0"/>
+  <hash upperCase="false"/>
+  <urlencoding exceptions="_-()~!*."/>
+</client>

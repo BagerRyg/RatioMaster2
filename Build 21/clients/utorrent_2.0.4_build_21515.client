@@ -1,0 +1,10 @@
+<client name="uTorrent 2.0.4 Build (21515)" author="CoreCore and Anon" version="1.0" processname="utorrent">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;corrupt=0&amp;key={key}{event}&amp;numwant={numwant}&amp;compact=1&amp;no_peer_id=1</query> 
+  <headers>Host: {host}_nl_User-Agent: uTorrent/2040(21515)_nl_Accept-Encoding: gzip_nl_</headers>
+  <peer_id prefix="-UT2040-%0bT" type="random" length="10" urlencoding="true" upperCase="false" value=""/>
+  <key type="hex" length="8" urlencoding="false" upperCase="true" value=""/>
+  <protocol value="HTTP/1.1"/>
+  <hash upperCase="false"/>
+  <urlencoding exceptions="-._~"/>
+  <numwant value="200" randomize="false"/>
+</client>

@@ -1,0 +1,8 @@
+<client name="BitLord 1.1" author="Ratiomaster" version="1.0" processname="bitlord">
+	<query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;natmapped=1&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;numwant={numwant}&amp;compact=1&amp;no_peer_id=1&amp;key={key}{event}</query>
+	<headers>User-Agent: BitTorrent/3.4.2_nl_Connection: close_nl_Accept-Encoding: gzip, deflate_nl_Host: {host}_nl_Cache-Control: no-cache_nl_</headers>
+	<peer_id prefix="exbc%01%01LORDCz%03%92" type="random" length="6" urlencoding="true" upperCase="true" value="" />
+	<key type="numeric" length="4" urlencoding="false" upperCase="false" value=""/>
+	<protocol value="HTTP/1.0"/>
+	<hash upperCase="true"/>
+</client>
