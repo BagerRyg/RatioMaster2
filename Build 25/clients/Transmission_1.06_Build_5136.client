@@ -1,0 +1,8 @@
+<client name="Transmission 1.06 (Build 5136)" author="SB-Innovation.de" version="1.0">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;corrupt=0&amp;left={left}&amp;compact=1&amp;numwant={numwant}&amp;key={key}&amp;supportcrypto=1&amp;requirecrypto=0{event}</query> 
+  <headers>Host: {host}_nl_Connection: close_nl_User-Agent: Transmission/1.06 (5136)_nl_</headers>
+  <peer_id prefix="-TR1060-" type="alphanumeric" length="12" urlencoding="false" lowerCase="true" value=""/>
+  <key type="alphanumeric" length="10" urlencoding="false" upperCase="false" value=""/>
+  <protocol value="HTTP/1.1"/>
+  <hash upperCase="true"/>
+</client>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -162,8 +163,6 @@ public class Form1 : Form
 	public CheckBox checkTCPListen;
 
 	public GroupBox proxySettingsGroup;
-
-	public LinkLabel linkProxyHelp;
 
 	public TextBox textProxyPass;
 
@@ -525,7 +524,6 @@ public class Form1 : Form
 		this.checkRequestScrap = new RatioMaster.DarkCheckBox();
 		this.checkTCPListen = new RatioMaster.DarkCheckBox();
 		this.proxySettingsGroup = new System.Windows.Forms.GroupBox();
-		this.linkProxyHelp = new System.Windows.Forms.LinkLabel();
 		this.textProxyPass = new System.Windows.Forms.TextBox();
 		this.textProxyUser = new System.Windows.Forms.TextBox();
 		this.labelProxyPass = new System.Windows.Forms.Label();
@@ -972,7 +970,6 @@ public class Form1 : Form
 		this.checkTCPListen.TabIndex = 0;
 		this.checkTCPListen.Text = "Use TCP listener (appear connectable on tracker)";
 		this.checkTCPListen.UseVisualStyleBackColor = true;
-		this.proxySettingsGroup.Controls.Add(this.linkProxyHelp);
 		this.proxySettingsGroup.Controls.Add(this.textProxyPass);
 		this.proxySettingsGroup.Controls.Add(this.textProxyUser);
 		this.proxySettingsGroup.Controls.Add(this.labelProxyPass);
@@ -991,13 +988,6 @@ public class Form1 : Form
 		this.proxySettingsGroup.TabStop = false;
 		this.proxySettingsGroup.Text = "Proxy Server Settings";
 		this.toolTip1.SetToolTip(this.proxySettingsGroup, "RM can use proxy to connect to the tracker, so you can hide your real IP.");
-		this.linkProxyHelp.Location = new System.Drawing.Point(9, 69);
-		this.linkProxyHelp.Name = "linkProxyHelp";
-		this.linkProxyHelp.Size = new System.Drawing.Size(145, 13);
-		this.linkProxyHelp.TabIndex = 11;
-		this.linkProxyHelp.TabStop = true;
-		this.linkProxyHelp.Text = "Help with proxies";
-		this.linkProxyHelp.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(linkProxyHelp_LinkClicked);
 		this.textProxyPass.Location = new System.Drawing.Point(456, 62);
 		this.textProxyPass.Name = "textProxyPass";
 		this.textProxyPass.Size = new System.Drawing.Size(90, 20);
@@ -1821,9 +1811,49 @@ public class Form1 : Form
 
 	private void DeployRecentTorrents()
 	{
+		RefreshTorrentFileList(null);
+	}
+
+	private void RefreshTorrentFileList(string selectedPath)
+	{
 		RecentTorrents recentTorrents = new RecentTorrents(this);
-		torrentFile.Items.Clear();
-		torrentFile.DataSource = recentTorrents.GetRecentTorrents();
+		List<RecentTorrentListItem> items = recentTorrents.GetRecentTorrents();
+		int selectedIndex = -1;
+		if (!string.IsNullOrWhiteSpace(selectedPath))
+		{
+			for (int i = 0; i < items.Count; i++)
+			{
+				if (string.Equals(items[i].ToString(), selectedPath, StringComparison.OrdinalIgnoreCase))
+				{
+					selectedIndex = i;
+					break;
+				}
+			}
+			if (selectedIndex < 0)
+			{
+				items.Insert(0, new RecentTorrentListItem
+				{
+					applicationSettings = new ApplicationSettings { torrentFilePath = selectedPath },
+					FilePath = selectedPath
+				});
+				selectedIndex = 0;
+			}
+		}
+		torrentFile.BeginUpdate();
+		try
+		{
+			torrentFile.DataSource = null;
+			torrentFile.Items.Clear();
+			torrentFile.DataSource = items;
+			if (selectedIndex >= 0 && selectedIndex < torrentFile.Items.Count)
+			{
+				torrentFile.SelectedIndex = selectedIndex;
+			}
+		}
+		finally
+		{
+			torrentFile.EndUpdate();
+		}
 	}
 
 	private void GetUpnpInfo()
@@ -3295,6 +3325,7 @@ public class Form1 : Form
 				{
 					applicationSettings.LoadTorrentSettings(shaHash.Text);
 				}
+				RefreshTorrentFileList(torrentFilePath);
 				return true;
 			}
 			AddLogLine("Torrent with this path doesnt exists.Please enter valid full path of the torrent.");
@@ -3466,11 +3497,6 @@ public class Form1 : Form
 		}
 		Activate();
 		Focus();
-	}
-
-	private void linkProxyHelp_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
-	{
-		MessageBox.Show(this, "Proxy help is not available.", "Proxy Help", MessageBoxButtons.OK, MessageBoxIcon.Information);
 	}
 
 	private void trayIcon_BalloonTipShown(object sender, EventArgs e)
@@ -3849,6 +3875,9 @@ public class Form1 : Form
 
 	private void torrentFileBox_SelectionChangeCommitted(object sender, EventArgs e)
 	{
-		loadTorrentFileInfo(((RecentTorrentListItem)torrentFile.SelectedItem).ToString(), loadSettings: true);
+		if (torrentFile.SelectedItem is RecentTorrentListItem item)
+		{
+			loadTorrentFileInfo(item.ToString(), loadSettings: true);
+		}
 	}
 }

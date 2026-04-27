@@ -360,7 +360,6 @@ internal static class DarkTheme
 
 internal sealed class DarkComboBox : ComboBox
 {
-	private const int WM_CTLCOLORLISTBOX = 0x0134;
 	private static readonly Color Input = Color.FromArgb(25, 25, 25);
 	private static readonly Color Border = Color.FromArgb(88, 88, 88);
 	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
@@ -425,14 +424,6 @@ internal sealed class DarkComboBox : ComboBox
 		}
 	}
 
-	protected override void WndProc(ref Message m)
-	{
-		base.WndProc(ref m);
-		if (m.Msg == WM_CTLCOLORLISTBOX)
-		{
-			DarkTheme.ApplyDarkWindowTheme(m.LParam);
-		}
-	}
 }
 
 internal sealed class DarkButton : Button
