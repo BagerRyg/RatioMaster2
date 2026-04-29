@@ -87,6 +87,8 @@ public class ApplicationSettings
 
 	private bool _savePeerList;
 
+	private string _interfaceTheme;
+
 	private Form1 _mainForm;
 
 	public decimal textStopMinLeecher
@@ -545,6 +547,18 @@ public class ApplicationSettings
 		}
 	}
 
+	public string interfaceTheme
+	{
+		get
+		{
+			return _interfaceTheme;
+		}
+		set
+		{
+			_interfaceTheme = value;
+		}
+	}
+
 	public ApplicationSettings()
 	{
 	}
@@ -601,6 +615,7 @@ public class ApplicationSettings
 			ignoreTimeout = _mainForm.checkIgnoreTimeout.Checked;
 			useUPnP = _mainForm.checkUPnP.Checked;
 			savePeerList = _mainForm.checkSavePeers.Checked;
+			interfaceTheme = _mainForm.cbbInterfaceTheme.SelectedItem?.ToString() ?? DarkTheme.CurrentThemeName;
 			xmlSerializer = new XmlSerializer(typeof(ApplicationSettings));
 			using (StreamWriter streamWriter = new StreamWriter(_configPath, append: false))
 			{
@@ -695,6 +710,7 @@ public class ApplicationSettings
 						applicationSettings2 = applicationSettings;
 						applicationSettings2.checkShowTrayBaloon = applicationSettings3.checkShowTrayBaloon;
 						applicationSettings2.minimizeTotray = applicationSettings3.minimizeTotray;
+						applicationSettings2.interfaceTheme = applicationSettings3.interfaceTheme;
 					}
 				}
 				bindToIp = applicationSettings2.bindToIp;
@@ -752,6 +768,8 @@ public class ApplicationSettings
 			_mainForm.checkIgnoreTimeout.Checked = myAppSettings.ignoreTimeout;
 			_mainForm.checkUPnP.Checked = myAppSettings.useUPnP;
 			_mainForm.checkSavePeers.Checked = myAppSettings.savePeerList;
+			string text = string.IsNullOrEmpty(myAppSettings.interfaceTheme) ? "Dark" : myAppSettings.interfaceTheme;
+			_mainForm.cbbInterfaceTheme.SelectedItem = string.Equals(text, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
 			_mainForm.setSelectedLanguage(myAppSettings.selectedLanguage);
 		}
 		catch (Exception ex)

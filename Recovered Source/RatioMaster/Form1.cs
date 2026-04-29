@@ -326,6 +326,10 @@ public class Form1 : Form
 
 	public Label lblLanguage;
 
+	public Label lblInterface;
+
+	public ComboBox cbbInterfaceTheme;
+
 	public LocalizationManager lclzManager;
 
 	public Label labelBindIp;
@@ -382,6 +386,8 @@ public class Form1 : Form
 
 	private bool TestNetworkInProgress;
 
+	private FormStartPosition initialStartPosition = FormStartPosition.CenterScreen;
+
 	[CommandLineSwitch("uploadrate", "Upload Rate")]
 	[Browsable(false)]
 	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -429,11 +435,19 @@ public class Form1 : Form
 
 	public Form1()
 	{
+		Opacity = 0.0;
+		SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+		BackColor = DarkTheme.WindowColor;
+		ForeColor = DarkTheme.TextColor;
 		InitializeComponent();
 		Text = "Ratio Master 2.0";
+		cbbInterfaceTheme.SelectedItem = DarkTheme.CurrentThemeName;
 		DarkTheme.Apply(this);
 		DarkTheme.Apply(menuRightClickTray);
 		DarkTheme.Apply(toolTip1);
+		initialStartPosition = StartPosition;
+		StartPosition = FormStartPosition.Manual;
+		Location = new Point(-32000, -32000);
 	}
 
 	protected override void Dispose(bool disposing)
@@ -576,6 +590,8 @@ public class Form1 : Form
 		this.tabControl1 = new RatioMaster.DarkTabControl();
 		this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
 		this.lblLanguage = new System.Windows.Forms.Label();
+		this.lblInterface = new System.Windows.Forms.Label();
+		this.cbbInterfaceTheme = new RatioMaster.DarkComboBox();
 		this.ResetCountersButton = new RatioMaster.DarkButton();
 		this.menuRightClickTray.SuspendLayout();
 		this.tabAbout.SuspendLayout();
@@ -1551,6 +1567,21 @@ public class Form1 : Form
 		this.toolTip1.InitialDelay = 100;
 		this.toolTip1.ReshowDelay = 20;
 		this.toolTip1.Popup += new System.Windows.Forms.PopupEventHandler(toolTip1_Popup);
+		this.lblInterface.ForeColor = System.Drawing.SystemColors.ControlText;
+		this.lblInterface.Location = new System.Drawing.Point(15, 20);
+		this.lblInterface.Name = "lblInterface";
+		this.lblInterface.Size = new System.Drawing.Size(66, 13);
+		this.lblInterface.TabIndex = 32;
+		this.lblInterface.Text = "Interface:";
+		this.lblInterface.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+		this.cbbInterfaceTheme.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+		this.cbbInterfaceTheme.FormattingEnabled = true;
+		this.cbbInterfaceTheme.Items.AddRange(new object[2] { "Dark", "Light" });
+		this.cbbInterfaceTheme.Location = new System.Drawing.Point(84, 16);
+		this.cbbInterfaceTheme.Name = "cbbInterfaceTheme";
+		this.cbbInterfaceTheme.Size = new System.Drawing.Size(92, 21);
+		this.cbbInterfaceTheme.TabIndex = 33;
+		this.cbbInterfaceTheme.SelectedIndexChanged += new System.EventHandler(cbbInterfaceTheme_SelectedIndexChanged);
 		this.lblLanguage.ForeColor = System.Drawing.SystemColors.ControlText;
 		this.lblLanguage.Location = new System.Drawing.Point(355, 20);
 		this.lblLanguage.Name = "lblLanguage";
@@ -1570,6 +1601,8 @@ public class Form1 : Form
 		this.AutoSize = true;
 		base.ClientSize = new System.Drawing.Size(629, 460);
 		base.Controls.Add(this.ResetCountersButton);
+		base.Controls.Add(this.lblInterface);
+		base.Controls.Add(this.cbbInterfaceTheme);
 		base.Controls.Add(this.lblLanguage);
 		base.Controls.Add(this.cbbLanguages);
 		base.Controls.Add(this.StartButton);
@@ -1632,6 +1665,7 @@ public class Form1 : Form
 			{
 				RuntimeLog.WriteException("UI thread exception", e.Exception);
 			};
+			DarkTheme.LoadSavedThemeMode();
 			DarkTheme.EnableDarkApplicationMode();
 			Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 			Application.EnableVisualStyles();
@@ -1753,6 +1787,15 @@ public class Form1 : Form
 		localizeSpecialCases();
 		DarkTheme.Apply(this);
 		DarkTheme.Apply(menuRightClickTray);
+		BeginInvoke(new Action(delegate
+		{
+			if (initialStartPosition == FormStartPosition.CenterScreen)
+			{
+				Rectangle workingArea = Screen.FromControl(this).WorkingArea;
+				Location = new Point(workingArea.Left + (workingArea.Width - Width) / 2, workingArea.Top + (workingArea.Height - Height) / 2);
+			}
+			Opacity = 1.0;
+		}));
 	}
 
 	public void InitLocalization()
@@ -1803,6 +1846,19 @@ public class Form1 : Form
 		DarkTheme.Apply(menuRightClickTray);
 	}
 
+	private void cbbInterfaceTheme_SelectedIndexChanged(object sender, EventArgs e)
+	{
+		if (cbbInterfaceTheme.SelectedItem == null)
+		{
+			return;
+		}
+		DarkTheme.ApplyThemeMode(cbbInterfaceTheme.SelectedItem.ToString());
+		DarkTheme.Apply(this);
+		DarkTheme.Apply(menuRightClickTray);
+		DarkTheme.Apply(toolTip1);
+		Invalidate(true);
+	}
+
 	private void localizeSpecialCases()
 	{
 		stopProcessActionBox.Items[0] = lclzManager.TranslateMessage("stopProcessOpt1", "Do not stop");
@@ -1812,6 +1868,7 @@ public class Form1 : Form
 		restoreToolStripMenuItem.Text = lclzManager.TranslateMessage("restoreToolStripMenuItem", "Restore");
 		exitToolStripMenuItem.Text = lclzManager.TranslateMessage("exitToolStripMenuItem", "Exit");
 		comboBindIp.Items[0] = new KeyValuePair("default", lclzManager.TranslateMessage("defaultBinding", "Default"));
+		lblInterface.Text = "Interface:";
 	}
 
 	public void ParseCommandLine()

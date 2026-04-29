@@ -1,35 +1,122 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
 namespace RatioMaster;
 
 internal static class DarkTheme
 {
-	private static readonly Color Window = Color.FromArgb(31, 31, 31);
-	private static readonly Color Panel = Color.FromArgb(38, 38, 38);
-	private static readonly Color Input = Color.FromArgb(25, 25, 25);
-	private static readonly Color Border = Color.FromArgb(70, 70, 70);
-	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
-	private static readonly Color Selected = Color.FromArgb(72, 72, 72);
-	private static readonly Color Text = Color.White;
-	private static readonly Color MutedText = Color.FromArgb(210, 210, 210);
-	private static readonly Color Accent = Color.FromArgb(86, 156, 214);
-	private static readonly Color GreenHover = Color.FromArgb(36, 110, 63);
-	private static readonly Color RedHover = Color.FromArgb(132, 45, 45);
+	private static Color Window = Color.FromArgb(31, 31, 31);
+	private static Color Panel = Color.FromArgb(38, 38, 38);
+	private static Color Input = Color.FromArgb(25, 25, 25);
+	private static Color Border = Color.FromArgb(70, 70, 70);
+	private static Color Hover = Color.FromArgb(58, 58, 58);
+	private static Color Selected = Color.FromArgb(72, 72, 72);
+	private static Color Text = Color.White;
+	private static Color MutedText = Color.FromArgb(210, 210, 210);
+	private static Color Accent = Color.FromArgb(86, 156, 214);
+	private static Color GreenHover = Color.FromArgb(36, 110, 63);
+	private static Color RedHover = Color.FromArgb(132, 45, 45);
+	private static Color Button = Color.FromArgb(45, 45, 45);
+	private static Color DisabledButton = Color.FromArgb(30, 30, 30);
+	private static Color DisabledBorder = Color.FromArgb(48, 48, 48);
+	private static Color DisabledText = Color.FromArgb(105, 105, 105);
+	private static Color Tab = Color.FromArgb(42, 42, 42);
 
 	private static readonly HashSet<ComboBox> ComboBoxes = new HashSet<ComboBox>();
 	private static readonly HashSet<TabControl> TabControls = new HashSet<TabControl>();
 	private static readonly HashSet<ToolTip> ToolTips = new HashSet<ToolTip>();
+
+	public static string CurrentThemeName { get; private set; } = "Dark";
+	public static bool IsDark => CurrentThemeName == "Dark";
+	internal static Color WindowColor => Window;
+	internal static Color PanelColor => Panel;
+	internal static Color InputColor => Input;
+	internal static Color BorderColor => Border;
+	internal static Color HoverColor => Hover;
+	internal static Color SelectedColor => Selected;
+	internal static Color TextColor => Text;
+	internal static Color MutedTextColor => MutedText;
+	internal static Color AccentColor => Accent;
+	internal static Color ButtonColor => Button;
+	internal static Color DisabledButtonColor => DisabledButton;
+	internal static Color DisabledBorderColor => DisabledBorder;
+	internal static Color DisabledTextColor => DisabledText;
+	internal static Color TabColor => Tab;
+
+	public static void LoadSavedThemeMode()
+	{
+		try
+		{
+			string configPath = Path.Combine(Application.StartupPath, "ratiomaster.config");
+			if (!File.Exists(configPath))
+			{
+				ApplyThemeMode("Dark");
+				return;
+			}
+			Match match = Regex.Match(File.ReadAllText(configPath), "<interfaceTheme>(.*?)</interfaceTheme>", RegexOptions.IgnoreCase);
+			ApplyThemeMode(match.Success ? match.Groups[1].Value : "Dark");
+		}
+		catch
+		{
+			ApplyThemeMode("Dark");
+		}
+	}
+
+	public static void ApplyThemeMode(string themeName)
+	{
+		CurrentThemeName = string.Equals(themeName, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+		if (IsDark)
+		{
+			Window = Color.FromArgb(31, 31, 31);
+			Panel = Color.FromArgb(38, 38, 38);
+			Input = Color.FromArgb(25, 25, 25);
+			Border = Color.FromArgb(70, 70, 70);
+			Hover = Color.FromArgb(58, 58, 58);
+			Selected = Color.FromArgb(72, 72, 72);
+			Text = Color.White;
+			MutedText = Color.FromArgb(230, 230, 230);
+			Accent = Color.FromArgb(86, 156, 214);
+			GreenHover = Color.FromArgb(36, 110, 63);
+			RedHover = Color.FromArgb(132, 45, 45);
+			Button = Color.FromArgb(45, 45, 45);
+			DisabledButton = Color.FromArgb(30, 30, 30);
+			DisabledBorder = Color.FromArgb(48, 48, 48);
+			DisabledText = Color.FromArgb(105, 105, 105);
+			Tab = Color.FromArgb(42, 42, 42);
+		}
+		else
+		{
+			Window = Color.FromArgb(246, 247, 249);
+			Panel = Color.FromArgb(255, 255, 255);
+			Input = Color.FromArgb(255, 255, 255);
+			Border = Color.FromArgb(176, 181, 188);
+			Hover = Color.FromArgb(229, 235, 243);
+			Selected = Color.FromArgb(214, 224, 238);
+			Text = Color.FromArgb(24, 28, 34);
+			MutedText = Color.FromArgb(41, 48, 57);
+			Accent = Color.FromArgb(0, 102, 204);
+			GreenHover = Color.FromArgb(198, 232, 211);
+			RedHover = Color.FromArgb(244, 204, 204);
+			Button = Color.FromArgb(245, 246, 248);
+			DisabledButton = Color.FromArgb(232, 234, 237);
+			DisabledBorder = Color.FromArgb(205, 210, 216);
+			DisabledText = Color.FromArgb(136, 142, 150);
+			Tab = Color.FromArgb(238, 240, 243);
+		}
+		EnableDarkApplicationMode();
+	}
 
 	public static void Apply(Form form)
 	{
 		form.BackColor = Window;
 		form.ForeColor = Text;
 		form.Font = new Font("Segoe UI", form.Font.SizeInPoints);
-		UseDarkTitleBar(form);
+		UseTitleBarTheme(form);
 		Apply((Control)form);
 	}
 
@@ -37,7 +124,7 @@ internal static class DarkTheme
 	{
 		try
 		{
-			SetPreferredAppMode(2);
+			SetPreferredAppMode(IsDark ? 2 : 0);
 			FlushMenuThemes();
 		}
 		catch
@@ -83,7 +170,7 @@ internal static class DarkTheme
 		form.MaximizeBox = false;
 		form.ShowInTaskbar = false;
 		form.ClientSize = new Size(560, 190);
-		UseDarkTitleBar(form);
+		UseTitleBarTheme(form);
 
 		PictureBox pictureBox = new PictureBox();
 		pictureBox.Location = new Point(28, 46);
@@ -277,14 +364,14 @@ internal static class DarkTheme
 		}
 	}
 
-	private static void UseDarkTitleBar(Form form)
+	private static void UseTitleBarTheme(Form form)
 	{
 		if (!form.IsHandleCreated)
 		{
-			form.HandleCreated += delegate { UseDarkTitleBar(form); };
+			form.HandleCreated += delegate { UseTitleBarTheme(form); };
 			return;
 		}
-		int value = 1;
+		int value = IsDark ? 1 : 0;
 		DwmSetWindowAttribute(form.Handle, 20, ref value, sizeof(int));
 		DwmSetWindowAttribute(form.Handle, 19, ref value, sizeof(int));
 	}
@@ -318,7 +405,7 @@ internal static class DarkTheme
 	{
 		if (hwnd != IntPtr.Zero)
 		{
-			SetWindowTheme(hwnd, "DarkMode_Explorer", null);
+			SetWindowTheme(hwnd, IsDark ? "DarkMode_Explorer" : null, null);
 		}
 	}
 
@@ -456,10 +543,6 @@ internal static class DarkTheme
 
 internal sealed class DarkComboBox : ComboBox
 {
-	private static readonly Color Input = Color.FromArgb(25, 25, 25);
-	private static readonly Color Border = Color.FromArgb(88, 88, 88);
-	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
-	private static readonly Color TextColor = Color.White;
 	private bool hovering;
 
 	public DarkComboBox()
@@ -505,16 +588,17 @@ internal sealed class DarkComboBox : ComboBox
 		Rectangle bounds = ClientRectangle;
 		Rectangle buttonBounds = new Rectangle(bounds.Right - SystemInformation.HorizontalScrollBarArrowWidth - 1, 1, SystemInformation.HorizontalScrollBarArrowWidth, bounds.Height - 2);
 		Rectangle textBounds = new Rectangle(6, 0, Math.Max(0, buttonBounds.Left - 8), bounds.Height);
-		using (Brush inputBrush = new SolidBrush(Input))
-		using (Brush buttonBrush = new SolidBrush(hovering ? Hover : Color.FromArgb(42, 42, 42)))
-		using (Brush textBrush = new SolidBrush(Enabled ? TextColor : Color.FromArgb(120, 120, 120)))
-		using (Pen borderPen = new Pen(Border))
-		using (Pen arrowPen = new Pen(TextColor, 2f))
+		Color textColor = Enabled ? DarkTheme.TextColor : DarkTheme.DisabledTextColor;
+		using (Brush inputBrush = new SolidBrush(DarkTheme.InputColor))
+		using (Brush buttonBrush = new SolidBrush(hovering ? DarkTheme.HoverColor : DarkTheme.TabColor))
+		using (Brush textBrush = new SolidBrush(textColor))
+		using (Pen borderPen = new Pen(DarkTheme.BorderColor))
+		using (Pen arrowPen = new Pen(textColor, 2f))
 		{
 			e.Graphics.FillRectangle(inputBrush, bounds);
 			e.Graphics.FillRectangle(buttonBrush, buttonBounds);
 			e.Graphics.DrawRectangle(borderPen, 0, 0, bounds.Width - 1, bounds.Height - 1);
-			TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, Enabled ? TextColor : Color.FromArgb(120, 120, 120), TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+			TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, textColor, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
 			Point middle = new Point(buttonBounds.Left + buttonBounds.Width / 2, buttonBounds.Top + buttonBounds.Height / 2);
 			e.Graphics.DrawLines(arrowPen, new[] { new Point(middle.X - 4, middle.Y - 2), new Point(middle.X, middle.Y + 2), new Point(middle.X + 4, middle.Y - 2) });
 		}
@@ -524,19 +608,14 @@ internal sealed class DarkComboBox : ComboBox
 
 internal sealed class DarkNumericUpDown : NumericUpDown
 {
-	private static readonly Color Input = Color.FromArgb(25, 25, 25);
-	private static readonly Color Border = Color.FromArgb(88, 88, 88);
-	private static readonly Color ButtonBack = Color.FromArgb(42, 42, 42);
-	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
-	private static readonly Color TextColor = Color.White;
 	private bool hovering;
 
 	public DarkNumericUpDown()
 	{
 		SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
 		BorderStyle = BorderStyle.FixedSingle;
-		BackColor = Input;
-		ForeColor = TextColor;
+		BackColor = DarkTheme.InputColor;
+		ForeColor = DarkTheme.TextColor;
 	}
 
 	protected override void OnHandleCreated(EventArgs e)
@@ -585,11 +664,11 @@ internal sealed class DarkNumericUpDown : NumericUpDown
 		Rectangle upBounds = new Rectangle(buttonBounds.Left, buttonBounds.Top, buttonBounds.Width, buttonBounds.Height / 2);
 		Rectangle downBounds = new Rectangle(buttonBounds.Left, upBounds.Bottom, buttonBounds.Width, buttonBounds.Bottom - upBounds.Bottom);
 		Rectangle textBounds = new Rectangle(4, 0, Math.Max(0, buttonBounds.Left - 6), bounds.Height);
-		Color textColor = Enabled ? TextColor : Color.FromArgb(120, 120, 120);
+		Color textColor = Enabled ? DarkTheme.TextColor : DarkTheme.DisabledTextColor;
 
-		using (Brush inputBrush = new SolidBrush(Input))
-		using (Brush buttonBrush = new SolidBrush(hovering && Enabled ? Hover : ButtonBack))
-		using (Pen borderPen = new Pen(Border))
+		using (Brush inputBrush = new SolidBrush(DarkTheme.InputColor))
+		using (Brush buttonBrush = new SolidBrush(hovering && Enabled ? DarkTheme.HoverColor : DarkTheme.TabColor))
+		using (Pen borderPen = new Pen(DarkTheme.BorderColor))
 		using (Brush arrowBrush = new SolidBrush(textColor))
 		{
 			e.Graphics.FillRectangle(inputBrush, bounds);
@@ -616,13 +695,6 @@ internal sealed class DarkNumericUpDown : NumericUpDown
 
 internal sealed class DarkButton : Button
 {
-	private static readonly Color Back = Color.FromArgb(45, 45, 45);
-	private static readonly Color Border = Color.FromArgb(70, 70, 70);
-	private static readonly Color DisabledBack = Color.FromArgb(30, 30, 30);
-	private static readonly Color DisabledBorder = Color.FromArgb(48, 48, 48);
-	private static readonly Color Down = Color.FromArgb(72, 72, 72);
-	private static readonly Color TextColor = Color.White;
-	private static readonly Color DisabledText = Color.FromArgb(105, 105, 105);
 	private bool hovering;
 	private bool pressed;
 
@@ -670,11 +742,11 @@ internal sealed class DarkButton : Button
 
 	protected override void OnPaint(PaintEventArgs e)
 	{
-		Color backColor = Enabled ? Back : DisabledBack;
-		Color borderColor = Enabled ? Border : DisabledBorder;
+		Color backColor = Enabled ? DarkTheme.ButtonColor : DarkTheme.DisabledButtonColor;
+		Color borderColor = Enabled ? DarkTheme.BorderColor : DarkTheme.DisabledBorderColor;
 		if (pressed && Enabled)
 		{
-			backColor = Down;
+			backColor = DarkTheme.SelectedColor;
 		}
 		else if (hovering && Enabled)
 		{
@@ -686,17 +758,12 @@ internal sealed class DarkButton : Button
 			e.Graphics.FillRectangle(backBrush, ClientRectangle);
 			e.Graphics.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
 		}
-		TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, Enabled ? TextColor : DisabledText, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+		TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, Enabled ? DarkTheme.TextColor : DarkTheme.DisabledTextColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 	}
 }
 
 internal sealed class DarkCheckBox : CheckBox
 {
-	private static readonly Color Panel = Color.FromArgb(38, 38, 38);
-	private static readonly Color Input = Color.FromArgb(25, 25, 25);
-	private static readonly Color Border = Color.FromArgb(88, 88, 88);
-	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
-	private static readonly Color TextColor = Color.White;
 	private bool hovering;
 
 	public DarkCheckBox()
@@ -726,11 +793,11 @@ internal sealed class DarkCheckBox : CheckBox
 
 	protected override void OnPaint(PaintEventArgs e)
 	{
-		e.Graphics.Clear(Panel);
+		e.Graphics.Clear(DarkTheme.PanelColor);
 		Rectangle box = new Rectangle(1, Math.Max(1, (Height - 14) / 2), 14, 14);
-		using (Brush boxBrush = new SolidBrush(hovering ? Hover : Input))
-		using (Pen borderPen = new Pen(Border))
-		using (Pen checkPen = new Pen(TextColor, 2f))
+		using (Brush boxBrush = new SolidBrush(hovering ? DarkTheme.HoverColor : DarkTheme.InputColor))
+		using (Pen borderPen = new Pen(DarkTheme.BorderColor))
+		using (Pen checkPen = new Pen(DarkTheme.TextColor, 2f))
 		{
 			e.Graphics.FillRectangle(boxBrush, box);
 			e.Graphics.DrawRectangle(borderPen, box);
@@ -745,7 +812,7 @@ internal sealed class DarkCheckBox : CheckBox
 			}
 		}
 		Rectangle textBounds = new Rectangle(box.Right + 6, 0, Math.Max(0, Width - box.Right - 6), Height);
-		TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, TextColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+		TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, DarkTheme.TextColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 	}
 }
 
@@ -765,13 +832,6 @@ internal sealed class DarkRichTextBox : RichTextBox
 
 internal sealed class DarkTabControl : TabControl
 {
-	private static readonly Color Window = Color.FromArgb(31, 31, 31);
-	private static readonly Color Panel = Color.FromArgb(38, 38, 38);
-	private static readonly Color Tab = Color.FromArgb(42, 42, 42);
-	private static readonly Color Selected = Color.FromArgb(72, 72, 72);
-	private static readonly Color Border = Color.FromArgb(88, 88, 88);
-	private static readonly Color TextColor = Color.White;
-
 	public DarkTabControl()
 	{
 		SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
@@ -783,9 +843,9 @@ internal sealed class DarkTabControl : TabControl
 
 	protected override void OnPaint(PaintEventArgs e)
 	{
-		using (Brush windowBrush = new SolidBrush(Window))
-		using (Brush panelBrush = new SolidBrush(Panel))
-		using (Pen borderPen = new Pen(Border))
+		using (Brush windowBrush = new SolidBrush(DarkTheme.WindowColor))
+		using (Brush panelBrush = new SolidBrush(DarkTheme.PanelColor))
+		using (Pen borderPen = new Pen(DarkTheme.BorderColor))
 		{
 			e.Graphics.FillRectangle(windowBrush, ClientRectangle);
 			Rectangle body = DisplayRectangle;
@@ -803,12 +863,12 @@ internal sealed class DarkTabControl : TabControl
 	{
 		Rectangle bounds = GetTabRect(index);
 		bool selected = index == SelectedIndex;
-		using (Brush backBrush = new SolidBrush(selected ? Selected : Tab))
-		using (Pen borderPen = new Pen(Border))
+		using (Brush backBrush = new SolidBrush(selected ? DarkTheme.SelectedColor : DarkTheme.TabColor))
+		using (Pen borderPen = new Pen(DarkTheme.BorderColor))
 		{
 			graphics.FillRectangle(backBrush, bounds);
 			graphics.DrawRectangle(borderPen, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
 		}
-		TextRenderer.DrawText(graphics, TabPages[index].Text, Font, bounds, TextColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+		TextRenderer.DrawText(graphics, TabPages[index].Text, Font, bounds, DarkTheme.TextColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 	}
 }
