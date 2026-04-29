@@ -48,8 +48,6 @@ public class Form1 : Form
 
 	private delegate void updateLabelCallback(Label textbox, string text);
 
-	private delegate void ShowVersionConfirmCallback();
-
 	private delegate void ShowMessageCallback(string message, string title);
 
 	private delegate void SetTextCallback(string logLine);
@@ -120,8 +118,6 @@ public class Form1 : Form
 
 	private torrentClient[] TorrentClients;
 
-	private VersionChecker versionChecker;
-
 	public TabPage tabAbout;
 
 	private Label label10;
@@ -185,8 +181,6 @@ public class Form1 : Form
 	public Label labelProxyType;
 
 	public TabPage tabAdvanced;
-
-	public CheckBox checkNewVersion;
 
 	public CheckBox checkShowTrayBaloon;
 
@@ -290,6 +284,8 @@ public class Form1 : Form
 
 	public Label downloadRateLabel;
 
+	private Label speedWarningLabel;
+
 	public GroupBox groupTorrentInfo;
 
 	private Label torrentSize;
@@ -330,33 +326,7 @@ public class Form1 : Form
 
 	public Label lblLanguage;
 
-	private TabPage tabUpdates;
-
-	public Button checkUpdatesButton;
-
-	public DataGridView dgvUpdates;
-
-	public Button installUpdatesButton;
-
 	public LocalizationManager lclzManager;
-
-	public Label lblCheckUpdates;
-
-	private DataGridViewCheckBoxColumn UpdateSelected;
-
-	private DataGridViewTextBoxColumn UpdateName;
-
-	private DataGridViewTextBoxColumn UpdateFileName;
-
-	private DataGridViewTextBoxColumn UpdateType;
-
-	private DataGridViewTextBoxColumn UpdateAuthor;
-
-	public Label labelUpdates;
-
-	public CheckBox ckbToggleGridSelection;
-
-	public ProgressBar installProgress;
 
 	public Label labelBindIp;
 
@@ -365,8 +335,6 @@ public class Form1 : Form
 	public CheckBox checkMinimizeToTray;
 
 	public CheckBox checkIgnoreTimeout;
-
-	public UpdatesManager updatesManager;
 
 	public CheckBox checkUPnP;
 
@@ -415,6 +383,8 @@ public class Form1 : Form
 	private bool TestNetworkInProgress;
 
 	[CommandLineSwitch("uploadrate", "Upload Rate")]
+	[Browsable(false)]
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 	public string UploadRateCM
 	{
 		get
@@ -428,6 +398,8 @@ public class Form1 : Form
 	}
 
 	[CommandLineSwitch("downloadrate", "Download Rate")]
+	[Browsable(false)]
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 	public string DownloadRateCM
 	{
 		get
@@ -441,6 +413,8 @@ public class Form1 : Form
 	}
 
 	[CommandLineSwitch("percent", "Finished Percent")]
+	[Browsable(false)]
+	[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 	public string PercentFinishedCM
 	{
 		get
@@ -456,7 +430,6 @@ public class Form1 : Form
 	public Form1()
 	{
 		InitializeComponent();
-		versionChecker = new VersionChecker(this);
 		Text = "Ratio Master 2.0";
 		DarkTheme.Apply(this);
 		DarkTheme.Apply(menuRightClickTray);
@@ -517,7 +490,7 @@ public class Form1 : Form
 		this.labelBindIp = new System.Windows.Forms.Label();
 		this.comboBindIp = new RatioMaster.DarkComboBox();
 		this.checkIgnoreFailureReason = new RatioMaster.DarkCheckBox();
-		this.textStopMinLeecher = new System.Windows.Forms.NumericUpDown();
+		this.textStopMinLeecher = new RatioMaster.DarkNumericUpDown();
 		this.labelStopMinLeecher = new System.Windows.Forms.Label();
 		this.interval = new System.Windows.Forms.TextBox();
 		this.intervalLabel = new System.Windows.Forms.Label();
@@ -538,7 +511,6 @@ public class Form1 : Form
 		this.checkMinimizeToTray = new RatioMaster.DarkCheckBox();
 		this.memoryReaderButton = new RatioMaster.DarkButton();
 		this.updateAnnounceParamsOnStart = new RatioMaster.DarkCheckBox();
-		this.checkNewVersion = new RatioMaster.DarkCheckBox();
 		this.checkShowTrayBaloon = new RatioMaster.DarkCheckBox();
 		this.TorrentClientsBox = new RatioMaster.DarkComboBox();
 		this.ClientLabel = new System.Windows.Forms.Label();
@@ -593,6 +565,7 @@ public class Form1 : Form
 		this.downloadRate = new System.Windows.Forms.TextBox();
 		this.uploadRateLabel = new System.Windows.Forms.Label();
 		this.downloadRateLabel = new System.Windows.Forms.Label();
+		this.speedWarningLabel = new System.Windows.Forms.Label();
 		this.groupTorrentInfo = new System.Windows.Forms.GroupBox();
 		this.torrentSize = new System.Windows.Forms.Label();
 		this.labelTorrentSize = new System.Windows.Forms.Label();
@@ -601,19 +574,6 @@ public class Form1 : Form
 		this.trackerAddress = new System.Windows.Forms.TextBox();
 		this.TrackerLabel = new System.Windows.Forms.Label();
 		this.tabControl1 = new RatioMaster.DarkTabControl();
-		this.tabUpdates = new System.Windows.Forms.TabPage();
-		this.installProgress = new System.Windows.Forms.ProgressBar();
-		this.ckbToggleGridSelection = new RatioMaster.DarkCheckBox();
-		this.labelUpdates = new System.Windows.Forms.Label();
-		this.lblCheckUpdates = new System.Windows.Forms.Label();
-		this.installUpdatesButton = new RatioMaster.DarkButton();
-		this.dgvUpdates = new System.Windows.Forms.DataGridView();
-		this.UpdateSelected = new System.Windows.Forms.DataGridViewCheckBoxColumn();
-		this.UpdateName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-		this.UpdateFileName = new System.Windows.Forms.DataGridViewTextBoxColumn();
-		this.UpdateType = new System.Windows.Forms.DataGridViewTextBoxColumn();
-		this.UpdateAuthor = new System.Windows.Forms.DataGridViewTextBoxColumn();
-		this.checkUpdatesButton = new RatioMaster.DarkButton();
 		this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
 		this.lblLanguage = new System.Windows.Forms.Label();
 		this.ResetCountersButton = new RatioMaster.DarkButton();
@@ -633,8 +593,6 @@ public class Form1 : Form
 		this.groupBoxOptions.SuspendLayout();
 		this.groupTorrentInfo.SuspendLayout();
 		this.tabControl1.SuspendLayout();
-		this.tabUpdates.SuspendLayout();
-		((System.ComponentModel.ISupportInitialize)this.dgvUpdates).BeginInit();
 		base.SuspendLayout();
 		this.serverUpdateTimer.Interval = 1000;
 		this.serverUpdateTimer.Tick += new System.EventHandler(serverUpdateTimer_Tick);
@@ -742,6 +700,8 @@ public class Form1 : Form
 		this.tabAbout.Text = "About";
 		this.tabAbout.UseVisualStyleBackColor = true;
 		this.tabAbout.Controls.Clear();
+		this.tabAbout.Controls.Add(this.versionAboutLabel);
+		this.tabAbout.Controls.Add(this.label2);
 		this.label10.AutoSize = true;
 		this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 6.75f, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, 0);
 		this.label10.Location = new System.Drawing.Point(293, 326);
@@ -791,26 +751,27 @@ public class Form1 : Form
 		this.label7.Size = new System.Drawing.Size(139, 13);
 		this.label7.TabIndex = 2;
 		this.label7.Text = "";
-		this.versionAboutLabel.AutoSize = true;
-		this.versionAboutLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-		this.versionAboutLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
-		this.versionAboutLabel.Location = new System.Drawing.Point(132, 190);
+		this.versionAboutLabel.AutoSize = false;
+		this.versionAboutLabel.BorderStyle = System.Windows.Forms.BorderStyle.None;
+		this.versionAboutLabel.Font = new System.Drawing.Font("Segoe UI", 12f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+		this.versionAboutLabel.Location = new System.Drawing.Point(99, 171);
 		this.versionAboutLabel.Name = "versionAboutLabel";
-		this.versionAboutLabel.Size = new System.Drawing.Size(2, 22);
+		this.versionAboutLabel.Size = new System.Drawing.Size(400, 28);
 		this.versionAboutLabel.TabIndex = 1;
+		this.versionAboutLabel.Text = "Build 37 using .NET 10.0";
 		this.versionAboutLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-		this.label2.AutoSize = true;
-		this.label2.BackColor = System.Drawing.SystemColors.ActiveBorder;
-		this.label2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+		this.label2.AutoSize = false;
+		this.label2.BackColor = System.Drawing.Color.Transparent;
+		this.label2.BorderStyle = System.Windows.Forms.BorderStyle.None;
 		this.label2.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-		this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25f, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+		this.label2.Font = new System.Drawing.Font("Segoe UI", 26.25f, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 		this.label2.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.label2.Location = new System.Drawing.Point(35, 151);
+		this.label2.Location = new System.Drawing.Point(99, 112);
 		this.label2.Name = "label2";
-		this.label2.Padding = new System.Windows.Forms.Padding(5);
-		this.label2.Size = new System.Drawing.Size(184, 43);
+		this.label2.Padding = new System.Windows.Forms.Padding(0);
+		this.label2.Size = new System.Drawing.Size(400, 56);
 		this.label2.TabIndex = 0;
-		this.label2.Text = "";
+		this.label2.Text = "Ratio Master 2.0";
 		this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 		this.tabLog.Controls.Add(this.saveLogButton);
 		this.tabLog.Controls.Add(this.checkLogEnabled);
@@ -1062,7 +1023,7 @@ public class Form1 : Form
 		this.tabAdvanced.UseVisualStyleBackColor = true;
 		this.checkMinimizeToTray.Checked = true;
 		this.checkMinimizeToTray.CheckState = System.Windows.Forms.CheckState.Checked;
-		this.checkMinimizeToTray.Location = new System.Drawing.Point(405, 306);
+		this.checkMinimizeToTray.Location = new System.Drawing.Point(15, 328);
 		this.checkMinimizeToTray.Name = "checkMinimizeToTray";
 		this.checkMinimizeToTray.Size = new System.Drawing.Size(178, 17);
 		this.checkMinimizeToTray.TabIndex = 29;
@@ -1084,20 +1045,13 @@ public class Form1 : Form
 		this.updateAnnounceParamsOnStart.Text = "Update peer_id and key on startup";
 		this.toolTip1.SetToolTip(this.updateAnnounceParamsOnStart, "When this option checked,RM generates new peer_id and key each time you start it.\r\nIf unchecked RM  uses values saved from previous time.");
 		this.updateAnnounceParamsOnStart.UseVisualStyleBackColor = true;
-		this.checkNewVersion.Location = new System.Drawing.Point(212, 306);
-		this.checkNewVersion.Name = "checkNewVersion";
-		this.checkNewVersion.Size = new System.Drawing.Size(178, 17);
-		this.checkNewVersion.TabIndex = 26;
-		this.checkNewVersion.Text = "";
-		this.checkNewVersion.Visible = false;
-		this.checkNewVersion.UseVisualStyleBackColor = true;
 		this.checkShowTrayBaloon.Checked = true;
 		this.checkShowTrayBaloon.CheckState = System.Windows.Forms.CheckState.Checked;
 		this.checkShowTrayBaloon.Location = new System.Drawing.Point(15, 306);
 		this.checkShowTrayBaloon.Name = "checkShowTrayBaloon";
-		this.checkShowTrayBaloon.Size = new System.Drawing.Size(179, 17);
+		this.checkShowTrayBaloon.Size = new System.Drawing.Size(220, 17);
 		this.checkShowTrayBaloon.TabIndex = 25;
-		this.checkShowTrayBaloon.Text = "Show baloon for tray icon";
+		this.checkShowTrayBaloon.Text = "Enable tray hover-over info";
 		this.checkShowTrayBaloon.UseVisualStyleBackColor = true;
 		this.TorrentClientsBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.TorrentClientsBox.FormattingEnabled = true;
@@ -1431,6 +1385,7 @@ public class Form1 : Form
 		this.groupBoxOptions.Controls.Add(this.downloadRate);
 		this.groupBoxOptions.Controls.Add(this.uploadRateLabel);
 		this.groupBoxOptions.Controls.Add(this.downloadRateLabel);
+		this.groupBoxOptions.Controls.Add(this.speedWarningLabel);
 		this.groupBoxOptions.ForeColor = System.Drawing.SystemColors.Desktop;
 		this.groupBoxOptions.Location = new System.Drawing.Point(12, 143);
 		this.groupBoxOptions.Name = "groupBoxOptions";
@@ -1439,7 +1394,7 @@ public class Form1 : Form
 		this.groupBoxOptions.TabStop = false;
 		this.groupBoxOptions.Text = "Options";
 		this.applyStopSettingsButton.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.applyStopSettingsButton.Location = new System.Drawing.Point(460, 74);
+		this.applyStopSettingsButton.Location = new System.Drawing.Point(460, 87);
 		this.applyStopSettingsButton.Name = "applyStopSettingsButton";
 		this.applyStopSettingsButton.Size = new System.Drawing.Size(98, 23);
 		this.applyStopSettingsButton.TabIndex = 24;
@@ -1448,7 +1403,7 @@ public class Form1 : Form
 		this.applyStopSettingsButton.Click += new System.EventHandler(applyStopSettingsButton_Click);
 		this.stopProcessUnitsBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.stopProcessUnitsBox.FormattingEnabled = true;
-		this.stopProcessUnitsBox.Location = new System.Drawing.Point(358, 75);
+		this.stopProcessUnitsBox.Location = new System.Drawing.Point(358, 88);
 		this.stopProcessUnitsBox.Name = "stopProcessUnitsBox";
 		this.stopProcessUnitsBox.Size = new System.Drawing.Size(79, 21);
 		this.stopProcessUnitsBox.TabIndex = 23;
@@ -1456,14 +1411,14 @@ public class Form1 : Form
 		this.stopProcessActionBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.stopProcessActionBox.FormattingEnabled = true;
 		this.stopProcessActionBox.Items.AddRange(new object[4] { "Do not stop", "Uploaded", "Downloaded", "Time" });
-		this.stopProcessActionBox.Location = new System.Drawing.Point(174, 75);
+		this.stopProcessActionBox.Location = new System.Drawing.Point(174, 88);
 		this.stopProcessActionBox.Name = "stopProcessActionBox";
 		this.stopProcessActionBox.Size = new System.Drawing.Size(92, 21);
 		this.stopProcessActionBox.TabIndex = 22;
 		this.toolTip1.SetToolTip(this.stopProcessActionBox, "RM can stop process automatically .\r\nChoose between different options and enter values.");
 		this.stopProcessActionBox.SelectedIndexChanged += new System.EventHandler(stopProcessActionBox_SelectedIndexChanged);
 		this.stopProcessActionBox.DropDown += new System.EventHandler(stopProcessActionBox_DropDown);
-		this.stopProcessValue.Location = new System.Drawing.Point(272, 76);
+		this.stopProcessValue.Location = new System.Drawing.Point(272, 89);
 		this.stopProcessValue.Name = "stopProcessValue";
 		this.stopProcessValue.Size = new System.Drawing.Size(80, 20);
 		this.stopProcessValue.TabIndex = 21;
@@ -1471,7 +1426,7 @@ public class Form1 : Form
 		this.stopProcessValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
 		this.stopProcessValue.Visible = false;
 		this.stopProcessLabel.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.stopProcessLabel.Location = new System.Drawing.Point(9, 78);
+		this.stopProcessLabel.Location = new System.Drawing.Point(9, 91);
 		this.stopProcessLabel.Name = "stopProcessLabel";
 		this.stopProcessLabel.Size = new System.Drawing.Size(155, 13);
 		this.stopProcessLabel.TabIndex = 20;
@@ -1523,6 +1478,13 @@ public class Form1 : Form
 		this.downloadRateLabel.TabIndex = 10;
 		this.downloadRateLabel.Text = "Download Speed (kB/s) :";
 		this.downloadRateLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+		this.speedWarningLabel.ForeColor = System.Drawing.Color.FromArgb(235, 85, 85);
+		this.speedWarningLabel.Location = new System.Drawing.Point(214, 68);
+		this.speedWarningLabel.Name = "speedWarningLabel";
+		this.speedWarningLabel.Size = new System.Drawing.Size(330, 17);
+		this.speedWarningLabel.TabIndex = 25;
+		this.speedWarningLabel.Text = "Warning: speeds above 20000 KB/s may look suspicious.";
+		this.speedWarningLabel.Visible = false;
 		this.groupTorrentInfo.Controls.Add(this.torrentSize);
 		this.groupTorrentInfo.Controls.Add(this.labelTorrentSize);
 		this.groupTorrentInfo.Controls.Add(this.shaHash);
@@ -1577,7 +1539,6 @@ public class Form1 : Form
 		this.tabControl1.Controls.Add(this.tabAdvanced);
 		this.tabControl1.Controls.Add(this.tabNetwork);
 		this.tabControl1.Controls.Add(this.tabLog);
-		this.tabControl1.Controls.Add(this.tabUpdates);
 		this.tabControl1.Controls.Add(this.tabAbout);
 		this.tabControl1.Location = new System.Drawing.Point(15, 44);
 		this.tabControl1.Name = "tabControl1";
@@ -1585,99 +1546,6 @@ public class Form1 : Form
 		this.tabControl1.SelectedIndex = 0;
 		this.tabControl1.Size = new System.Drawing.Size(605, 374);
 		this.tabControl1.TabIndex = 20;
-		this.tabUpdates.Controls.Add(this.installProgress);
-		this.tabUpdates.Controls.Add(this.ckbToggleGridSelection);
-		this.tabUpdates.Controls.Add(this.labelUpdates);
-		this.tabUpdates.Controls.Add(this.lblCheckUpdates);
-		this.tabUpdates.Controls.Add(this.installUpdatesButton);
-		this.tabUpdates.Controls.Add(this.dgvUpdates);
-		this.tabUpdates.Controls.Add(this.checkUpdatesButton);
-		this.tabUpdates.Location = new System.Drawing.Point(4, 22);
-		this.tabUpdates.Name = "tabUpdates";
-		this.tabUpdates.Size = new System.Drawing.Size(597, 348);
-		this.tabUpdates.TabIndex = 5;
-		this.tabUpdates.Text = "Updates";
-		this.tabUpdates.UseVisualStyleBackColor = true;
-		this.installProgress.Location = new System.Drawing.Point(22, 300);
-		this.installProgress.Name = "installProgress";
-		this.installProgress.Size = new System.Drawing.Size(373, 23);
-		this.installProgress.TabIndex = 31;
-		this.installProgress.Visible = false;
-		this.ckbToggleGridSelection.AutoSize = true;
-		this.ckbToggleGridSelection.Checked = true;
-		this.ckbToggleGridSelection.CheckState = System.Windows.Forms.CheckState.Checked;
-		this.ckbToggleGridSelection.Location = new System.Drawing.Point(29, 53);
-		this.ckbToggleGridSelection.Name = "ckbToggleGridSelection";
-		this.ckbToggleGridSelection.Size = new System.Drawing.Size(15, 14);
-		this.ckbToggleGridSelection.TabIndex = 30;
-		this.ckbToggleGridSelection.UseVisualStyleBackColor = true;
-		this.ckbToggleGridSelection.CheckedChanged += new System.EventHandler(ckbToggleGridSelection_CheckedChanged);
-		this.labelUpdates.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75f, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
-		this.labelUpdates.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.labelUpdates.Location = new System.Drawing.Point(19, 12);
-		this.labelUpdates.Name = "labelUpdates";
-		this.labelUpdates.Size = new System.Drawing.Size(564, 21);
-		this.labelUpdates.TabIndex = 29;
-		this.labelUpdates.Text = "Clients and languages";
-		this.labelUpdates.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-		this.lblCheckUpdates.Location = new System.Drawing.Point(19, 260);
-		this.lblCheckUpdates.Name = "lblCheckUpdates";
-		this.lblCheckUpdates.Size = new System.Drawing.Size(392, 23);
-		this.lblCheckUpdates.TabIndex = 28;
-		this.lblCheckUpdates.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-		this.installUpdatesButton.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.installUpdatesButton.Location = new System.Drawing.Point(417, 300);
-		this.installUpdatesButton.Name = "installUpdatesButton";
-		this.installUpdatesButton.Size = new System.Drawing.Size(166, 23);
-		this.installUpdatesButton.TabIndex = 27;
-		this.installUpdatesButton.Text = "Install Updates";
-		this.installUpdatesButton.Visible = false;
-		this.installUpdatesButton.Click += new System.EventHandler(installUpdatesButton_Click);
-		this.dgvUpdates.AllowUserToAddRows = false;
-		this.dgvUpdates.AllowUserToDeleteRows = false;
-		this.dgvUpdates.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-		this.dgvUpdates.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-		this.dgvUpdates.Columns.AddRange(this.UpdateSelected, this.UpdateName, this.UpdateFileName, this.UpdateType, this.UpdateAuthor);
-		this.dgvUpdates.Location = new System.Drawing.Point(19, 49);
-		this.dgvUpdates.MultiSelect = false;
-		this.dgvUpdates.Name = "dgvUpdates";
-		this.dgvUpdates.RowHeadersVisible = false;
-		this.dgvUpdates.ShowCellErrors = false;
-		this.dgvUpdates.ShowEditingIcon = false;
-		this.dgvUpdates.ShowRowErrors = false;
-		this.dgvUpdates.Size = new System.Drawing.Size(564, 205);
-		this.dgvUpdates.StandardTab = true;
-		this.dgvUpdates.TabIndex = 26;
-		this.UpdateSelected.DataPropertyName = "UpdateSelected";
-		this.UpdateSelected.FillWeight = 1f;
-		this.UpdateSelected.HeaderText = "";
-		this.UpdateSelected.MinimumWidth = 30;
-		this.UpdateSelected.Name = "UpdateSelected";
-		this.UpdateName.DataPropertyName = "UpdateName";
-		this.UpdateName.FillWeight = 84.62384f;
-		this.UpdateName.HeaderText = "Name";
-		this.UpdateName.Name = "UpdateName";
-		this.UpdateName.ReadOnly = true;
-		this.UpdateFileName.DataPropertyName = "UpdateFileName";
-		this.UpdateFileName.HeaderText = "File Name";
-		this.UpdateFileName.Name = "UpdateFileName";
-		this.UpdateType.DataPropertyName = "UpdateType";
-		this.UpdateType.FillWeight = 84.62384f;
-		this.UpdateType.HeaderText = "Type";
-		this.UpdateType.Name = "UpdateType";
-		this.UpdateType.ReadOnly = true;
-		this.UpdateAuthor.DataPropertyName = "UpdateAuthor";
-		this.UpdateAuthor.FillWeight = 84.62384f;
-		this.UpdateAuthor.HeaderText = "Author";
-		this.UpdateAuthor.Name = "UpdateAuthor";
-		this.UpdateAuthor.ReadOnly = true;
-		this.checkUpdatesButton.ForeColor = System.Drawing.SystemColors.ControlText;
-		this.checkUpdatesButton.Location = new System.Drawing.Point(417, 260);
-		this.checkUpdatesButton.Name = "checkUpdatesButton";
-		this.checkUpdatesButton.Size = new System.Drawing.Size(166, 23);
-		this.checkUpdatesButton.TabIndex = 25;
-		this.checkUpdatesButton.Text = "Check for Updates";
-		this.checkUpdatesButton.Click += new System.EventHandler(checkUpdatesButton_Click);
 		this.toolTip1.AutomaticDelay = 100;
 		this.toolTip1.AutoPopDelay = 10000;
 		this.toolTip1.InitialDelay = 100;
@@ -1744,9 +1612,6 @@ public class Form1 : Form
 		this.groupTorrentInfo.ResumeLayout(false);
 		this.groupTorrentInfo.PerformLayout();
 		this.tabControl1.ResumeLayout(false);
-		this.tabUpdates.ResumeLayout(false);
-		this.tabUpdates.PerformLayout();
-		((System.ComponentModel.ISupportInitialize)this.dgvUpdates).EndInit();
 		base.ResumeLayout(false);
 	}
 
@@ -1791,7 +1656,7 @@ public class Form1 : Form
 	{
 		applicationSettings = new ApplicationSettings(this);
 		TorrentClientsObj = new TorrentClientsEnum(this);
-		versionAboutLabel.Text = versionChecker.PublicVersion;
+		versionAboutLabel.Text = "Build 37 using .NET 10.0";
 		InitLocalization();
 		deployDefaultValues();
 		if (updateAnnounceParamsOnStart.Checked)
@@ -1946,10 +1811,6 @@ public class Form1 : Form
 		stopProcessActionBox.Items[3] = lclzManager.TranslateMessage("stopProcessOpt4", "Time");
 		restoreToolStripMenuItem.Text = lclzManager.TranslateMessage("restoreToolStripMenuItem", "Restore");
 		exitToolStripMenuItem.Text = lclzManager.TranslateMessage("exitToolStripMenuItem", "Exit");
-		dgvUpdates.Columns[1].HeaderText = lclzManager.TranslateMessage("clmnUpdateName", "Name");
-		dgvUpdates.Columns[2].HeaderText = lclzManager.TranslateMessage("clmnUpdateFileName", "File Name");
-		dgvUpdates.Columns[3].HeaderText = lclzManager.TranslateMessage("clmnUpdateType", "Type");
-		dgvUpdates.Columns[4].HeaderText = lclzManager.TranslateMessage("clmnUpdateAuthor", "Author");
 		comboBindIp.Items[0] = new KeyValuePair("default", lclzManager.TranslateMessage("defaultBinding", "Default"));
 	}
 
@@ -2933,8 +2794,12 @@ public class Form1 : Form
 		}
 		if (!checkIgnoreFailureReason.Checked && !string.IsNullOrEmpty(trackerError))
 		{
+			if (HandleTrackerBackoff(trackerError))
+			{
+				return true;
+			}
 			stopTimerAndCounters();
-			MessageBox.Show(trackerError, "Tracker Response", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			ShowDarkMessage(trackerError, "Tracker Response", MessageBoxIcon.Hand);
 			return false;
 		}
 		updateInterval("1200");
@@ -2942,17 +2807,28 @@ public class Form1 : Form
 		return checkIgnoreFailureReason.Checked;
 	}
 
-	public void ShowVersionConfirmMessage()
+	private bool HandleTrackerBackoff(string trackerError)
+	{
+		Match match = Regex.Match(trackerError, "announce too soon.*?(\\d+)\\s+seconds?", RegexOptions.IgnoreCase);
+		if (!match.Success || !int.TryParse(match.Groups[1].Value, out int result))
+		{
+			return false;
+		}
+		int num = Math.Max(result + 10, 60);
+		updateInterval(num.ToString());
+		temporaryIntervalCounter = 0;
+		AddLogLine("Tracker requested announce backoff. Waiting " + num + " seconds before next announce.");
+		return true;
+	}
+
+	private void ShowDarkMessage(string message, string title, MessageBoxIcon icon)
 	{
 		if (base.InvokeRequired)
 		{
-			ShowVersionConfirmCallback method = ShowVersionConfirmMessage;
-			Invoke(method);
+			Invoke(new Action<string, string, MessageBoxIcon>(ShowDarkMessage), message, title, icon);
 			return;
 		}
-		string text = lclzManager.TranslateMessage("vrNewVersionReleased", "Version checking has been removed.");
-		string caption = lclzManager.TranslateMessage("vrNewVersionTitle", "New version available");
-		MessageBox.Show(this, text, caption, MessageBoxButtons.OK);
+		DarkTheme.ShowMessage(this, message, title, icon);
 	}
 
 	public void ShowMessage(string message, string title)
@@ -2964,7 +2840,7 @@ public class Form1 : Form
 		}
 		else
 		{
-			MessageBox.Show(this, message, title);
+			DarkTheme.ShowMessage(this, message, title, MessageBoxIcon.Information);
 		}
 	}
 
@@ -3545,6 +3421,7 @@ public class Form1 : Form
 	private void uploadRate_TextChanged(object sender, EventArgs e)
 	{
 		currentTorrent.uploadRate = (long)(parseValidFloat(uploadRate.Text, 50f) * 1024f);
+		UpdateSpeedWarning();
 	}
 
 	private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -3555,6 +3432,14 @@ public class Form1 : Form
 	private void downloadRate_TextChanged(object sender, EventArgs e)
 	{
 		currentTorrent.downloadRate = (long)(parseValidFloat(downloadRate.Text, 10f) * 1024f);
+		UpdateSpeedWarning();
+	}
+
+	private void UpdateSpeedWarning()
+	{
+		float uploadSpeed = parseValidFloat(uploadRate.Text, 0f);
+		float downloadSpeed = parseValidFloat(downloadRate.Text, 0f);
+		speedWarningLabel.Visible = uploadSpeed > 20000f || downloadSpeed > 20000f;
 	}
 
 	public string FormatFileSize(long fileSize)
@@ -3790,30 +3675,6 @@ public class Form1 : Form
 		if (!string.IsNullOrEmpty(text) && toolTip1.GetToolTip(e.AssociatedControl) != text)
 		{
 			toolTip1.SetToolTip(e.AssociatedControl, text);
-		}
-	}
-
-	private void checkUpdatesButton_Click(object sender, EventArgs e)
-	{
-		dgvUpdates.AutoGenerateColumns = false;
-		if (updatesManager == null)
-		{
-			updatesManager = new UpdatesManager(this);
-		}
-		updatesManager.CheckForUpdates();
-	}
-
-	private void installUpdatesButton_Click(object sender, EventArgs e)
-	{
-		updatesManager.DownloadSelectedUpdates();
-	}
-
-	private void ckbToggleGridSelection_CheckedChanged(object sender, EventArgs e)
-	{
-		bool flag = ckbToggleGridSelection.Checked;
-		foreach (DataGridViewRow item in (IEnumerable)dgvUpdates.Rows)
-		{
-			item.Cells[0].Value = flag;
 		}
 	}
 

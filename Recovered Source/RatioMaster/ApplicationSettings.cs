@@ -23,8 +23,6 @@ public class ApplicationSettings
 
 	private bool _checkTCPListen;
 
-	private bool _checkNewVersion;
-
 	private string _customPort;
 
 	private string _customKey;
@@ -331,18 +329,6 @@ public class ApplicationSettings
 		}
 	}
 
-	public bool checkNewVersion
-	{
-		get
-		{
-			return _checkNewVersion;
-		}
-		set
-		{
-			_checkNewVersion = value;
-		}
-	}
-
 	public bool checkRandomUpload
 	{
 		get
@@ -585,7 +571,6 @@ public class ApplicationSettings
 			checkRequestScrap = _mainForm.checkRequestScrap.Checked;
 			checkShowTrayBaloon = _mainForm.checkShowTrayBaloon.Checked;
 			checkTCPListen = _mainForm.checkTCPListen.Checked;
-			checkNewVersion = _mainForm.checkNewVersion.Checked;
 			customPort = _mainForm.customPort.Text;
 			customKey = _mainForm.customKey.Text;
 			customPeersNum = _mainForm.customPeersNum.Text;
@@ -700,6 +685,7 @@ public class ApplicationSettings
 				fileStream = fileInfo.OpenRead();
 				ApplicationSettings applicationSettings = null;
 				ApplicationSettings applicationSettings2 = (ApplicationSettings)xmlSerializer.Deserialize(fileStream);
+				ApplicationSettings applicationSettings3 = applicationSettings2;
 				string text = applicationSettings2.torrentHash;
 				if (text != null && text.Length > 0)
 				{
@@ -707,6 +693,8 @@ public class ApplicationSettings
 					if (applicationSettings != null)
 					{
 						applicationSettings2 = applicationSettings;
+						applicationSettings2.checkShowTrayBaloon = applicationSettings3.checkShowTrayBaloon;
+						applicationSettings2.minimizeTotray = applicationSettings3.minimizeTotray;
 					}
 				}
 				bindToIp = applicationSettings2.bindToIp;
@@ -738,7 +726,6 @@ public class ApplicationSettings
 			_mainForm.checkRequestScrap.Checked = myAppSettings.checkRequestScrap;
 			_mainForm.checkShowTrayBaloon.Checked = myAppSettings.checkShowTrayBaloon;
 			_mainForm.checkTCPListen.Checked = myAppSettings.checkTCPListen;
-			_mainForm.checkNewVersion.Checked = myAppSettings.checkNewVersion;
 			_mainForm.customPort.Text = myAppSettings.customPort;
 			_mainForm.customKey.Text = myAppSettings.customKey;
 			_mainForm.customPeersNum.Text = myAppSettings.customPeersNum;

@@ -73,6 +73,62 @@ internal static class DarkTheme
 		toolTip.Draw += DrawToolTip;
 	}
 
+	public static DialogResult ShowMessage(IWin32Window owner, string message, string title, MessageBoxIcon icon)
+	{
+		using Form form = new Form();
+		form.Text = title;
+		form.StartPosition = FormStartPosition.CenterParent;
+		form.FormBorderStyle = FormBorderStyle.FixedDialog;
+		form.MinimizeBox = false;
+		form.MaximizeBox = false;
+		form.ShowInTaskbar = false;
+		form.ClientSize = new Size(560, 190);
+		UseDarkTitleBar(form);
+
+		PictureBox pictureBox = new PictureBox();
+		pictureBox.Location = new Point(28, 46);
+		pictureBox.Size = new Size(42, 42);
+		pictureBox.SizeMode = PictureBoxSizeMode.CenterImage;
+		pictureBox.Image = GetMessageIcon(icon)?.ToBitmap();
+
+		Label label = new Label();
+		label.AutoSize = false;
+		label.Location = new Point(88, 35);
+		label.Size = new Size(435, 78);
+		label.Text = message;
+		label.TextAlign = ContentAlignment.MiddleLeft;
+
+		Button button = new Button();
+		button.Text = "OK";
+		button.DialogResult = DialogResult.OK;
+		button.Location = new Point(392, 132);
+		button.Size = new Size(130, 36);
+
+		form.Controls.Add(pictureBox);
+		form.Controls.Add(label);
+		form.Controls.Add(button);
+		form.AcceptButton = button;
+		Apply(form);
+		return form.ShowDialog(owner);
+	}
+
+	private static Icon GetMessageIcon(MessageBoxIcon icon)
+	{
+		switch (icon)
+		{
+		case MessageBoxIcon.Hand:
+			return SystemIcons.Error;
+		case MessageBoxIcon.Question:
+			return SystemIcons.Question;
+		case MessageBoxIcon.Exclamation:
+			return SystemIcons.Warning;
+		case MessageBoxIcon.Asterisk:
+			return SystemIcons.Information;
+		default:
+			return SystemIcons.Information;
+		}
+	}
+
 	private static void Apply(Control control)
 	{
 		StyleControl(control);
@@ -174,6 +230,16 @@ internal static class DarkTheme
 		{
 			ComboBoxes.Add(comboBox);
 			comboBox.DrawItem += DrawComboBoxItem;
+			comboBox.DropDown += ComboBox_DropDown;
+			ApplyDarkComboDropDown(comboBox);
+		}
+	}
+
+	private static void ComboBox_DropDown(object sender, EventArgs e)
+	{
+		if (sender is ComboBox comboBox)
+		{
+			ApplyDarkComboDropDown(comboBox);
 		}
 	}
 
@@ -231,6 +297,21 @@ internal static class DarkTheme
 			return;
 		}
 		ApplyDarkWindowTheme(control.Handle);
+	}
+
+	private static void ApplyDarkComboDropDown(ComboBox comboBox)
+	{
+		if (!comboBox.IsHandleCreated)
+		{
+			comboBox.HandleCreated += delegate { ApplyDarkComboDropDown(comboBox); };
+			return;
+		}
+		ComboBoxInfo comboBoxInfo = new ComboBoxInfo();
+		comboBoxInfo.cbSize = Marshal.SizeOf(typeof(ComboBoxInfo));
+		if (GetComboBoxInfo(comboBox.Handle, ref comboBoxInfo))
+		{
+			ApplyDarkWindowTheme(comboBoxInfo.hwndList);
+		}
 	}
 
 	public static void ApplyDarkWindowTheme(IntPtr hwnd)
@@ -356,6 +437,21 @@ internal static class DarkTheme
 
 	[DllImport("uxtheme.dll", EntryPoint = "#136")]
 	private static extern void FlushMenuThemes();
+
+	[DllImport("user32.dll")]
+	private static extern bool GetComboBoxInfo(IntPtr hwndCombo, ref ComboBoxInfo info);
+
+	[StructLayout(LayoutKind.Sequential)]
+	private struct ComboBoxInfo
+	{
+		public int cbSize;
+		public Rectangle rcItem;
+		public Rectangle rcButton;
+		public int stateButton;
+		public IntPtr hwndCombo;
+		public IntPtr hwndItem;
+		public IntPtr hwndList;
+	}
 }
 
 internal sealed class DarkComboBox : ComboBox
@@ -424,6 +520,98 @@ internal sealed class DarkComboBox : ComboBox
 		}
 	}
 
+}
+
+internal sealed class DarkNumericUpDown : NumericUpDown
+{
+	private static readonly Color Input = Color.FromArgb(25, 25, 25);
+	private static readonly Color Border = Color.FromArgb(88, 88, 88);
+	private static readonly Color ButtonBack = Color.FromArgb(42, 42, 42);
+	private static readonly Color Hover = Color.FromArgb(58, 58, 58);
+	private static readonly Color TextColor = Color.White;
+	private bool hovering;
+
+	public DarkNumericUpDown()
+	{
+		SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+		BorderStyle = BorderStyle.FixedSingle;
+		BackColor = Input;
+		ForeColor = TextColor;
+	}
+
+	protected override void OnHandleCreated(EventArgs e)
+	{
+		base.OnHandleCreated(e);
+		DarkTheme.ApplyDarkControlChrome(this);
+	}
+
+	protected override void OnMouseEnter(EventArgs e)
+	{
+		hovering = true;
+		Invalidate();
+		base.OnMouseEnter(e);
+	}
+
+	protected override void OnMouseLeave(EventArgs e)
+	{
+		hovering = false;
+		Invalidate();
+		base.OnMouseLeave(e);
+	}
+
+	protected override void OnValueChanged(EventArgs e)
+	{
+		Invalidate();
+		base.OnValueChanged(e);
+	}
+
+	protected override void OnTextChanged(EventArgs e)
+	{
+		Invalidate();
+		base.OnTextChanged(e);
+	}
+
+	protected override void OnEnabledChanged(EventArgs e)
+	{
+		Invalidate();
+		base.OnEnabledChanged(e);
+	}
+
+	protected override void OnPaint(PaintEventArgs e)
+	{
+		Rectangle bounds = ClientRectangle;
+		int buttonWidth = SystemInformation.VerticalScrollBarWidth;
+		Rectangle buttonBounds = new Rectangle(bounds.Right - buttonWidth - 1, 1, buttonWidth, bounds.Height - 2);
+		Rectangle upBounds = new Rectangle(buttonBounds.Left, buttonBounds.Top, buttonBounds.Width, buttonBounds.Height / 2);
+		Rectangle downBounds = new Rectangle(buttonBounds.Left, upBounds.Bottom, buttonBounds.Width, buttonBounds.Bottom - upBounds.Bottom);
+		Rectangle textBounds = new Rectangle(4, 0, Math.Max(0, buttonBounds.Left - 6), bounds.Height);
+		Color textColor = Enabled ? TextColor : Color.FromArgb(120, 120, 120);
+
+		using (Brush inputBrush = new SolidBrush(Input))
+		using (Brush buttonBrush = new SolidBrush(hovering && Enabled ? Hover : ButtonBack))
+		using (Pen borderPen = new Pen(Border))
+		using (Brush arrowBrush = new SolidBrush(textColor))
+		{
+			e.Graphics.FillRectangle(inputBrush, bounds);
+			e.Graphics.FillRectangle(buttonBrush, buttonBounds);
+			e.Graphics.DrawRectangle(borderPen, 0, 0, bounds.Width - 1, bounds.Height - 1);
+			e.Graphics.DrawLine(borderPen, buttonBounds.Left, buttonBounds.Top, buttonBounds.Left, buttonBounds.Bottom);
+			e.Graphics.DrawLine(borderPen, buttonBounds.Left, upBounds.Bottom, buttonBounds.Right, upBounds.Bottom);
+			TextRenderer.DrawText(e.Graphics, Text, Font, textBounds, textColor, TextFormatFlags.VerticalCenter | TextFormatFlags.Right | TextFormatFlags.EndEllipsis);
+			DrawTriangle(e.Graphics, arrowBrush, upBounds, true);
+			DrawTriangle(e.Graphics, arrowBrush, downBounds, false);
+		}
+	}
+
+	private static void DrawTriangle(Graphics graphics, Brush brush, Rectangle bounds, bool up)
+	{
+		int centerX = bounds.Left + bounds.Width / 2;
+		int centerY = bounds.Top + bounds.Height / 2;
+		Point[] points = up
+			? new[] { new Point(centerX, centerY - 3), new Point(centerX - 4, centerY + 2), new Point(centerX + 4, centerY + 2) }
+			: new[] { new Point(centerX, centerY + 3), new Point(centerX - 4, centerY - 2), new Point(centerX + 4, centerY - 2) };
+		graphics.FillPolygon(brush, points);
+	}
 }
 
 internal sealed class DarkButton : Button
