@@ -1,12 +1,12 @@
 .tools/
 Build */
 Build*/
-Recovered Source/
+Docker/
+Torrents Config/
 SECURITY_AUDIT_REPORT.md
 SECURITY_AUDIT_NOTES.md
 autidt_plan.md
 **/obj/
-Torrents Config/
 *.log
 **/bin/
 .env

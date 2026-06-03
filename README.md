@@ -1,11 +1,14 @@
 <a id="readme-top"></a>
 
+[![.NET 10][dotnet-shield]][dotnet-url]
+[![Windows App][windows-shield]][windows-url]
 [![Issues][issues-shield]][issues-url]
-[![Stars][stars-shield]][stars-url]
-[![Forks][forks-shield]][forks-url]
+[![License: GPL 3.0][license-shield]][license-url]
 
 <br />
 <div align="center">
+  <img src="RM.ico" alt="RatioMaster 2.0 icon" width="80" height="80">
+
   <h1 align="center">RatioMaster 2.0</h1>
 
   <p align="center">
@@ -28,6 +31,12 @@ All original credits go to Ratiomaster_06/Moofdev.
 RatioMaster 2.0 is a Windows application used to spoof upload and download statistics to a torrent tracker. It does not upload real torrent data to peers. The only data being sent is tracker announce data, such as reported uploaded/downloaded amounts, selected client identity, peer ID, key, port, and related tracker parameters.
 
 Use it carefully. Tracker behavior and rules vary.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Screenshots
+
+![RatioMaster 2.0 app preview](App_preview.png)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -69,7 +78,7 @@ Download the latest build from the repository releases or build it from source w
 ### Build From Source
 
 ```powershell
-dotnet publish ".\Recovered Source\RM.csproj" -c Release -r win-x64 --self-contained false -o ".\Build X"
+dotnet publish ".\Source\RM.csproj" -c Release -r win-x64 --self-contained false -o ".\Build X"
 ```
 
 Replace `Build X` with the next numbered build folder.
@@ -96,6 +105,12 @@ Please report bugs, feedback, or feature requests via GitHub issues:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## License
+
+Distributed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Disclaimer
 
 I take absolutely no responsibility. Use the program at your own risk.
@@ -113,9 +128,11 @@ The program comes with ZERO warranty.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-[issues-shield]: https://img.shields.io/github/issues/BagerRyg/RatioMaster2.svg?style=for-the-badge
+[dotnet-shield]: https://img.shields.io/badge/.NET-10-blue?style=for-the-badge
+[dotnet-url]: https://dotnet.microsoft.com/
+[windows-shield]: https://img.shields.io/badge/Windows-app-lightblue?style=for-the-badge
+[windows-url]: https://www.microsoft.com/windows
+[issues-shield]: https://img.shields.io/github/issues/BagerRyg/RatioMaster2.svg?style=for-the-badge&color=red
 [issues-url]: https://github.com/BagerRyg/RatioMaster2/issues
-[stars-shield]: https://img.shields.io/github/stars/BagerRyg/RatioMaster2.svg?style=for-the-badge
-[stars-url]: https://github.com/BagerRyg/RatioMaster2/stargazers
-[forks-shield]: https://img.shields.io/github/forks/BagerRyg/RatioMaster2.svg?style=for-the-badge
-[forks-url]: https://github.com/BagerRyg/RatioMaster2/network/members
+[license-shield]: https://img.shields.io/badge/License-GPL%203.0-green?style=for-the-badge
+[license-url]: LICENSE
