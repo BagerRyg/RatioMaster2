@@ -1,8 +1,14 @@
 .tools/
-Build 19/
-Build 20/
+Build */
+Build*/
+Recovered Source/
+SECURITY_AUDIT_REPORT.md
+SECURITY_AUDIT_NOTES.md
+autidt_plan.md
 **/obj/
 Torrents Config/
-Build 21/Torrents Config/
 *.log
 **/bin/
+.env
+.env.*
+!.env.example
