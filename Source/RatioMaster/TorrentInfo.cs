@@ -295,4 +295,19 @@ public struct TorrentInfo
 		_trackerUri = null;
 		_trackers = new string[0];
 	}
+
+	public void ClearSensitiveData()
+	{
+		_tracker = string.Empty;
+		_hash = string.Empty;
+		_filename = string.Empty;
+		_key = string.Empty;
+		_peerID = string.Empty;
+		_trackerUri = null;
+		if (_trackers != null)
+		{
+			Array.Clear(_trackers, 0, _trackers.Length);
+		}
+		_trackers = Array.Empty<string>();
+	}
 }

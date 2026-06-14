@@ -193,10 +193,24 @@ public class Socks4ProxyClient : IProxyClient
 		proxy.Write(array, 0, array.Length);
 		WaitForData(proxy);
 		byte[] array2 = new byte[8];
-		proxy.Read(array2, 0, 8);
+		ReadExact(proxy, array2, 0, array2.Length);
 		if (array2[1] != 90)
 		{
 			HandleProxyCommandError(array2, destinationHost, destinationPort);
+		}
+	}
+
+	internal static void ReadExact(NetworkStream stream, byte[] buffer, int offset, int count)
+	{
+		int totalRead = 0;
+		while (totalRead < count)
+		{
+			int read = stream.Read(buffer, offset + totalRead, count - totalRead);
+			if (read <= 0)
+			{
+				throw new ProxyException("The proxy destination closed the connection before sending the expected response.");
+			}
+			totalRead += read;
 		}
 	}
 

@@ -12,7 +12,7 @@ internal class RecentTorrents
 
 	public int RecentTorrentsListLength = 10;
 
-	private string TorrentsConfigDir = Application.StartupPath + "\\Torrents Config\\";
+	private string TorrentsConfigDir = AppPaths.TorrentConfigDirectory;
 
 	private FileStream myFileStream;
 
@@ -26,6 +26,7 @@ internal class RecentTorrents
 	public List<RecentTorrentListItem> GetRecentTorrents()
 	{
 		List<RecentTorrentListItem> list = new List<RecentTorrentListItem>();
+		AppPaths.MigrateLegacyUserData();
 		if (!Directory.Exists(TorrentsConfigDir))
 		{
 			return list;

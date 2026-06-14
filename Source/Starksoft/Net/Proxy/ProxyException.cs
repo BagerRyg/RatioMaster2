@@ -1,9 +1,7 @@
 using System;
-using System.Runtime.Serialization;
 
 namespace Starksoft.Net.Proxy;
 
-[Serializable]
 public class ProxyException : Exception
 {
 	public ProxyException()
@@ -20,8 +18,4 @@ public class ProxyException : Exception
 	{
 	}
 
-	protected ProxyException(SerializationInfo info, StreamingContext context)
-		: base(info, context)
-	{
-	}
 }

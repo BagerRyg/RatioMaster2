@@ -53,9 +53,9 @@ public class ApplicationSettings
 
 	private string _RandomDownloadTo;
 
-	private string _configPath = Application.StartupPath + "\\ratiomaster.config";
+	private string _configPath = AppPaths.ConfigPath;
 
-	private string _torrentsConfigDir = Application.StartupPath + "\\Torrents Config\\";
+	private string _torrentsConfigDir = AppPaths.TorrentConfigDirectory;
 
 	private string _finishedPercent;
 
@@ -235,6 +235,7 @@ public class ApplicationSettings
 		}
 	}
 
+	[XmlIgnore]
 	public string customKey
 	{
 		get
@@ -259,6 +260,7 @@ public class ApplicationSettings
 		}
 	}
 
+	[XmlIgnore]
 	public string customPeerID
 	{
 		get
@@ -295,6 +297,7 @@ public class ApplicationSettings
 		}
 	}
 
+	[XmlIgnore]
 	public string textProxyPass
 	{
 		get
@@ -566,6 +569,7 @@ public class ApplicationSettings
 	public ApplicationSettings(MainForm MainForm)
 	{
 		_mainForm = MainForm;
+		AppPaths.MigrateLegacyUserData();
 		if (!Directory.Exists(_torrentsConfigDir))
 		{
 			Directory.CreateDirectory(_torrentsConfigDir);
@@ -586,12 +590,9 @@ public class ApplicationSettings
 			checkShowTrayBaloon = _mainForm.checkShowTrayBaloon.Checked;
 			checkTCPListen = _mainForm.checkTCPListen.Checked;
 			customPort = _mainForm.customPort.Text;
-			customKey = _mainForm.customKey.Text;
 			customPeersNum = _mainForm.customPeersNum.Text;
-			customPeerID = _mainForm.customPeerID.Text;
 			textProxyHost = _mainForm.textProxyHost.Text;
 			textProxyPort = _mainForm.textProxyPort.Text;
-			textProxyPass = _mainForm.textProxyPass.Text;
 			textProxyUser = _mainForm.textProxyUser.Text;
 			comboProxyTypeIndex = _mainForm.comboProxyType.SelectedIndex;
 			checkRandomUpload = _mainForm.checkRandomUpload.Checked;
@@ -601,7 +602,7 @@ public class ApplicationSettings
 			RandomDownloadFrom = _mainForm.RandomDownloadFrom.Text;
 			RandomDownloadTo = _mainForm.RandomDownloadTo.Text;
 			finishedPercent = _mainForm.fileSize.Text;
-			updateAnnounceParamsOnStart = _mainForm.updateAnnounceParamsOnStart.Checked;
+			updateAnnounceParamsOnStart = true;
 			textStopMinLeecher = _mainForm.textStopMinLeecher.Value;
 			ignoreFailureReason = _mainForm.checkIgnoreFailureReason.Checked;
 			torrentFilePath = _mainForm.torrentFile.Text;
@@ -609,13 +610,13 @@ public class ApplicationSettings
 			stopProcessActionBox = _mainForm.stopProcessActionBox.SelectedIndex;
 			stopProcessUnitsBox = _mainForm.stopProcessUnitsBox.SelectedIndex;
 			stopProcessValue = _mainForm.stopProcessValue.Text;
-			selectedLanguage = ((LangInfo)_mainForm.cbbLanguages.SelectedItem).File;
-			bindToIp = ((MainForm.KeyValuePair)_mainForm.comboBindIp.SelectedItem).Key.ToString();
+			selectedLanguage = Path.GetFileName((_mainForm.cbbLanguages.SelectedItem as LangInfo)?.File ?? string.Empty);
+			bindToIp = (_mainForm.comboBindIp.SelectedItem as MainForm.KeyValuePair)?.Key?.ToString() ?? "default";
 			minimizeTotray = _mainForm.checkMinimizeToTray.Checked;
 			ignoreTimeout = _mainForm.checkIgnoreTimeout.Checked;
 			useUPnP = _mainForm.checkUPnP.Checked;
 			savePeerList = _mainForm.checkSavePeers.Checked;
-			interfaceTheme = _mainForm.cbbInterfaceTheme.SelectedItem?.ToString() ?? DarkTheme.CurrentThemeName;
+			interfaceTheme = DarkTheme.CurrentThemeName;
 			xmlSerializer = new XmlSerializer(typeof(ApplicationSettings));
 			using (StreamWriter streamWriter = new StreamWriter(_configPath, append: false))
 			{
@@ -635,7 +636,7 @@ public class ApplicationSettings
 
 	private string GetValueDef(string val, string defVal)
 	{
-		if (val.Length > 0)
+		if (!string.IsNullOrEmpty(val))
 		{
 			return val;
 		}
@@ -644,7 +645,7 @@ public class ApplicationSettings
 
 	public string getTorrentConfigPath(string torrentHash)
 	{
-		return _torrentsConfigDir + "torrent_" + torrentHash + ".config";
+		return Path.Combine(_torrentsConfigDir, "torrent_" + torrentHash + ".config");
 	}
 
 	public ApplicationSettings getTorrentSettings(string torrentHash)
@@ -661,7 +662,7 @@ public class ApplicationSettings
 			{
 				fileStream = fileInfo.OpenRead();
 				result = (ApplicationSettings)xmlSerializer.Deserialize(fileStream);
-				_mainForm.AddLogLine("Loaded settings from torrent config: " + torrentConfigPath);
+				_mainForm.AddLogLine("Loaded settings for the selected torrent.");
 			}
 		}
 		catch (Exception ex)
@@ -695,6 +696,10 @@ public class ApplicationSettings
 		{
 			xmlSerializer = new XmlSerializer(typeof(ApplicationSettings));
 			FileInfo fileInfo = new FileInfo(_configPath);
+			if (!fileInfo.Exists)
+			{
+				fileInfo = new FileInfo(AppPaths.LegacyConfigPath);
+			}
 			if (fileInfo.Exists)
 			{
 				fileStream = fileInfo.OpenRead();
@@ -737,20 +742,17 @@ public class ApplicationSettings
 			_mainForm.uploadRate.Text = myAppSettings.uploadRate;
 			_mainForm.downloadRate.Text = myAppSettings.downloadRate;
 			_mainForm.interval.Text = myAppSettings.interval;
-			_mainForm.TorrentClientsBox.SelectedIndex = myAppSettings.TorrentClientsIndex;
+			_mainForm.TorrentClientsBox.SelectedIndex = ClampIndex(myAppSettings.TorrentClientsIndex, _mainForm.TorrentClientsBox.Items.Count);
 			_mainForm.checkLogEnabled.Checked = myAppSettings.checkLogEnabled;
 			_mainForm.checkRequestScrap.Checked = myAppSettings.checkRequestScrap;
 			_mainForm.checkShowTrayBaloon.Checked = myAppSettings.checkShowTrayBaloon;
 			_mainForm.checkTCPListen.Checked = myAppSettings.checkTCPListen;
 			_mainForm.customPort.Text = myAppSettings.customPort;
-			_mainForm.customKey.Text = myAppSettings.customKey;
 			_mainForm.customPeersNum.Text = myAppSettings.customPeersNum;
-			_mainForm.customPeerID.Text = myAppSettings.customPeerID;
 			_mainForm.textProxyHost.Text = myAppSettings.textProxyHost;
 			_mainForm.textProxyPort.Text = myAppSettings.textProxyPort;
-			_mainForm.textProxyPass.Text = myAppSettings.textProxyPass;
 			_mainForm.textProxyUser.Text = myAppSettings.textProxyUser;
-			_mainForm.comboProxyType.SelectedIndex = myAppSettings.comboProxyTypeIndex;
+			_mainForm.comboProxyType.SelectedIndex = ClampIndex(myAppSettings.comboProxyTypeIndex, _mainForm.comboProxyType.Items.Count);
 			_mainForm.checkRandomUpload.Checked = myAppSettings.checkRandomUpload;
 			_mainForm.checkRandomDownload.Checked = myAppSettings.checkRandomDownload;
 			_mainForm.RandomUploadFrom.Text = myAppSettings.RandomUploadFrom;
@@ -758,23 +760,45 @@ public class ApplicationSettings
 			_mainForm.RandomDownloadFrom.Text = myAppSettings.RandomDownloadFrom;
 			_mainForm.RandomDownloadTo.Text = myAppSettings.RandomDownloadTo;
 			_mainForm.fileSize.Text = GetValueDef(myAppSettings.finishedPercent, "100");
-			_mainForm.updateAnnounceParamsOnStart.Checked = myAppSettings.updateAnnounceParamsOnStart;
-			_mainForm.textStopMinLeecher.Value = myAppSettings.textStopMinLeecher;
+			_mainForm.updateAnnounceParamsOnStart.Checked = true;
+			_mainForm.textStopMinLeecher.Value = ClampDecimal(myAppSettings.textStopMinLeecher, _mainForm.textStopMinLeecher.Minimum, _mainForm.textStopMinLeecher.Maximum);
 			_mainForm.checkIgnoreFailureReason.Checked = myAppSettings.ignoreFailureReason;
-			_mainForm.stopProcessActionBox.SelectedIndex = myAppSettings.stopProcessActionBox;
-			_mainForm.stopProcessUnitsBox.SelectedIndex = myAppSettings.stopProcessUnitsBox;
+			_mainForm.stopProcessActionBox.SelectedIndex = ClampIndex(myAppSettings.stopProcessActionBox, _mainForm.stopProcessActionBox.Items.Count);
+			_mainForm.stopProcessUnitsBox.SelectedIndex = ClampIndex(myAppSettings.stopProcessUnitsBox, _mainForm.stopProcessUnitsBox.Items.Count);
 			_mainForm.stopProcessValue.Text = myAppSettings.stopProcessValue;
 			_mainForm.checkMinimizeToTray.Checked = myAppSettings.minimizeTotray;
 			_mainForm.checkIgnoreTimeout.Checked = myAppSettings.ignoreTimeout;
 			_mainForm.checkUPnP.Checked = myAppSettings.useUPnP;
 			_mainForm.checkSavePeers.Checked = myAppSettings.savePeerList;
 			string text = string.IsNullOrEmpty(myAppSettings.interfaceTheme) ? "Dark" : myAppSettings.interfaceTheme;
-			_mainForm.cbbInterfaceTheme.SelectedItem = string.Equals(text, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+			_mainForm.SelectThemeByName(text);
 			_mainForm.setSelectedLanguage(myAppSettings.selectedLanguage);
 		}
 		catch (Exception ex)
 		{
 			_mainForm.AddLogLine("Error loading config: " + ex.Message);
 		}
+	}
+
+	private int ClampIndex(int value, int itemCount)
+	{
+		if (itemCount <= 0)
+		{
+			return -1;
+		}
+		if (value < 0)
+		{
+			return 0;
+		}
+		return value >= itemCount ? itemCount - 1 : value;
+	}
+
+	private decimal ClampDecimal(decimal value, decimal minimum, decimal maximum)
+	{
+		if (value < minimum)
+		{
+			return minimum;
+		}
+		return value > maximum ? maximum : value;
 	}
 }

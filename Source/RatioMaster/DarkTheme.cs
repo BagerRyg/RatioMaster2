@@ -52,11 +52,15 @@ internal static class DarkTheme
 	{
 		try
 		{
-			string configPath = Path.Combine(Application.StartupPath, "ratiomaster.config");
+			string configPath = AppPaths.ConfigPath;
 			if (!File.Exists(configPath))
 			{
-				ApplyThemeMode("Dark");
-				return;
+				configPath = AppPaths.LegacyConfigPath;
+				if (!File.Exists(configPath))
+				{
+					ApplyThemeMode("Dark");
+					return;
+				}
 			}
 			Match match = Regex.Match(File.ReadAllText(configPath), "<interfaceTheme>(.*?)</interfaceTheme>", RegexOptions.IgnoreCase);
 			ApplyThemeMode(match.Success ? match.Groups[1].Value : "Dark");

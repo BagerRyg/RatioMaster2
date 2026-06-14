@@ -57,7 +57,7 @@ public class Socks4aProxyClient : Socks4ProxyClient
 		proxy.Write(array2, 0, array2.Length);
 		WaitForData(proxy);
 		byte[] array3 = new byte[8];
-		proxy.Read(array3, 0, 8);
+		ReadExact(proxy, array3, 0, array3.Length);
 		if (array3[1] != 90)
 		{
 			HandleProxyCommandError(array3, destinationHost, destinationPort);

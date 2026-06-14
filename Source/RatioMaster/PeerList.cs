@@ -10,18 +10,15 @@ public class PeerList : List<Peer>
 
 	public override string ToString()
 	{
-		string text = "";
-		text = "(" + base.Count + ") ";
-		using Enumerator enumerator = GetEnumerator();
-		while (enumerator.MoveNext())
+		return "(" + Count + " peers)";
+	}
+
+	public void ClearSensitiveData()
+	{
+		foreach (Peer peer in this)
 		{
-			Peer current = enumerator.Current;
-			if (peerCounter < maxPeersToShow)
-			{
-				text = string.Concat(text, current, ";");
-			}
-			peerCounter++;
+			peer.ClearSensitiveData();
 		}
-		return text;
+		Clear();
 	}
 }

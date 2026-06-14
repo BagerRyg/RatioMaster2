@@ -21,6 +21,8 @@ namespace RatioMaster;
 public class MainForm : Form
 {
 	private const int TrackerSocketTimeoutMs = 15000;
+	private const int MaxTrackerResponseBytes = 4 * 1024 * 1024;
+	private const int MaxTrackerRedirects = 5;
 
 	public class KeyValuePair
 	{
@@ -387,6 +389,8 @@ public class MainForm : Form
 	private bool TestNetworkInProgress;
 
 	private FormStartPosition initialStartPosition = FormStartPosition.CenterScreen;
+
+	private bool isExiting;
 
 	[CommandLineSwitch("uploadrate", "Upload Rate")]
 	[Browsable(false)]
@@ -784,7 +788,7 @@ public class MainForm : Form
 		this.versionAboutLabel.Name = "versionAboutLabel";
 		this.versionAboutLabel.Size = new System.Drawing.Size(520, 25);
 		this.versionAboutLabel.TabIndex = 1;
-		this.versionAboutLabel.Text = "Build 66 using .NET 10.0";
+		this.versionAboutLabel.Text = "Build 72 using .NET 10.0";
 		this.versionAboutLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 		this.label2.AutoSize = false;
 		this.label2.BackColor = System.Drawing.Color.Transparent;
@@ -822,6 +826,7 @@ public class MainForm : Form
 		this.checkLogEnabled.TabIndex = 15;
 		this.checkLogEnabled.Text = "Enable full logging";
 		this.checkLogEnabled.UseVisualStyleBackColor = true;
+		this.checkLogEnabled.CheckedChanged += new System.EventHandler(checkLogEnabled_CheckedChanged);
 		this.clearLogButton.Location = new System.Drawing.Point(480, 317);
 		this.clearLogButton.Name = "clearLogButton";
 		this.clearLogButton.Size = new System.Drawing.Size(109, 23);
@@ -1069,8 +1074,10 @@ public class MainForm : Form
 		this.updateAnnounceParamsOnStart.Size = new System.Drawing.Size(276, 17);
 		this.updateAnnounceParamsOnStart.TabIndex = 27;
 		this.updateAnnounceParamsOnStart.Text = "Update peer_id and key on startup";
-		this.toolTip1.SetToolTip(this.updateAnnounceParamsOnStart, "When this option checked,RM generates new peer_id and key each time you start it.\r\nIf unchecked RM  uses values saved from previous time.");
+		this.toolTip1.SetToolTip(this.updateAnnounceParamsOnStart, "Peer ID and key are generated for every application session and are never saved.");
 		this.updateAnnounceParamsOnStart.UseVisualStyleBackColor = true;
+		this.updateAnnounceParamsOnStart.Checked = true;
+		this.updateAnnounceParamsOnStart.Enabled = false;
 		this.checkShowTrayBaloon.Checked = false;
 		this.checkShowTrayBaloon.CheckState = System.Windows.Forms.CheckState.Unchecked;
 		this.checkShowTrayBaloon.Location = new System.Drawing.Point(15, 306);
@@ -1687,26 +1694,18 @@ public class MainForm : Form
 			RuntimeLog.WriteException("Fatal startup exception", ex);
 			MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace, "Error");
 		}
-		try
-		{
-			Process.GetCurrentProcess().Kill();
-		}
-		catch (Exception)
-		{
-		}
+		RuntimeLog.Shutdown();
 	}
 
 	private void Form1_Load(object sender, EventArgs e)
 	{
 		applicationSettings = new ApplicationSettings(this);
 		TorrentClientsObj = new TorrentClientsEnum(this);
-		versionAboutLabel.Text = "Build 66 using .NET 10.0";
+		versionAboutLabel.Text = "Build 72 using .NET 10.0";
 		InitLocalization();
 		deployDefaultValues();
-		if (updateAnnounceParamsOnStart.Checked)
-		{
-			TorrentClientsBox_SelectedIndexChanged(null, null);
-		}
+		TorrentClientsBox_SelectedIndexChanged(null, null);
+		RuntimeLog.SetEnabled(checkLogEnabled.Checked);
 		loadSelectedLanguage();
 		ParseCommandLine();
 		UseDNS();
@@ -1714,6 +1713,7 @@ public class MainForm : Form
 		GetJavaInfo();
 		Thread thread = new Thread(GetUpnpInfo);
 		thread.Name = "GetUpnpInfo() Thread";
+		thread.IsBackground = true;
 		thread.Start();
 		DeployRecentTorrents();
 	}
@@ -1831,7 +1831,7 @@ public class MainForm : Form
 		}
 		foreach (object item in cbbLanguages.Items)
 		{
-			if (((LangInfo)item).File == filePath)
+			if (string.Equals(Path.GetFileName(((LangInfo)item).File), Path.GetFileName(filePath), StringComparison.OrdinalIgnoreCase))
 			{
 				cbbLanguages.SelectedItem = item;
 				return;
@@ -1863,7 +1863,10 @@ public class MainForm : Form
 		{
 			return;
 		}
-		DarkTheme.ApplyThemeMode(cbbInterfaceTheme.SelectedItem.ToString());
+		string themeName = cbbInterfaceTheme.SelectedItem is KeyValuePair pair
+			? pair.Key?.ToString()
+			: cbbInterfaceTheme.SelectedItem.ToString();
+		DarkTheme.ApplyThemeMode(themeName);
 		DarkTheme.Apply(this);
 		DarkTheme.Apply(menuRightClickTray);
 		DarkTheme.Apply(toolTip1);
@@ -1884,8 +1887,44 @@ public class MainForm : Form
 		restoreToolStripMenuItem.Text = lclzManager.TranslateMessage("restoreToolStripMenuItem", "Restore");
 		exitToolStripMenuItem.Text = lclzManager.TranslateMessage("exitToolStripMenuItem", "Exit");
 		comboBindIp.Items[0] = new KeyValuePair("default", lclzManager.TranslateMessage("defaultBinding", "Default"));
-		lblInterface.Text = "Interface:";
+		PopulateThemeOptions();
 		LayoutAboutTab();
+	}
+
+	private void PopulateThemeOptions()
+	{
+		string currentTheme = DarkTheme.CurrentThemeName;
+		cbbInterfaceTheme.BeginUpdate();
+		try
+		{
+			cbbInterfaceTheme.Items.Clear();
+			cbbInterfaceTheme.Items.Add(new KeyValuePair("Dark", lclzManager.TranslateMessage("themeDark", "Dark")));
+			cbbInterfaceTheme.Items.Add(new KeyValuePair("Light", lclzManager.TranslateMessage("themeLight", "Light")));
+			SelectThemeByName(currentTheme);
+		}
+		finally
+		{
+			cbbInterfaceTheme.EndUpdate();
+		}
+	}
+
+	public void SelectThemeByName(string themeName)
+	{
+		string normalized = string.Equals(themeName, "Light", StringComparison.OrdinalIgnoreCase) ? "Light" : "Dark";
+		foreach (object item in cbbInterfaceTheme.Items)
+		{
+			if (item is KeyValuePair pair && string.Equals(pair.Key?.ToString(), normalized, StringComparison.OrdinalIgnoreCase))
+			{
+				cbbInterfaceTheme.SelectedItem = item;
+				return;
+			}
+			if (string.Equals(item?.ToString(), normalized, StringComparison.OrdinalIgnoreCase))
+			{
+				cbbInterfaceTheme.SelectedItem = item;
+				return;
+			}
+		}
+		cbbInterfaceTheme.SelectedIndex = normalized == "Light" ? 1 : 0;
 	}
 
 	private void LayoutAboutTab()
@@ -1977,12 +2016,13 @@ public class MainForm : Form
 				}
 				else
 				{
-					localListen = new TcpListener(int.Parse(currentTorrent.port));
+					localListen = new TcpListener(IPAddress.Any, int.Parse(currentTorrent.port));
 				}
 				localListen.Start();
 				AddLogLine("Started TCP listener on port " + currentTorrent.port);
 				Thread thread = new Thread(AcceptTcpConnection);
 				thread.Name = "AcceptTcpConnection() Thread";
+				thread.IsBackground = true;
 				thread.Start();
 			}
 		}
@@ -2002,30 +2042,31 @@ public class MainForm : Form
 		Socket socket = null;
 		try
 		{
-			Encoding encoding = Encoding.GetEncoding(28591);
-			string text = null;
 			while (true)
 			{
 				socket = localListen.AcceptSocket();
-				byte[] array = new byte[67];
+				byte[] array = new byte[68];
 				if (socket != null && socket.Connected)
 				{
 					AddLogLine("Client connected");
 					NetworkStream networkStream = new NetworkStream(socket);
 					networkStream.ReadTimeout = 1000;
-					try
-					{
-						networkStream.Read(array, 0, array.Length);
-					}
-					catch (Exception)
-					{
-					}
-					text = encoding.GetString(array, 0, array.Length);
-					if (text.IndexOf("BitTorrent protocol") >= 0 && text.IndexOf(encoding.GetString(currentTorrentFile.InfoHash)) >= 0)
+					bool completeHandshake = ReadHandshake(networkStream, array);
+					byte[] infoHash = currentTorrentFile?.InfoHash;
+					if (completeHandshake && infoHash != null && HandshakeMatches(array, infoHash))
 					{
 						byte[] array2 = createHandshakeResponse();
-						networkStream.Write(array2, 0, array2.Length);
+						if (array2 != null)
+						{
+							networkStream.Write(array2, 0, array2.Length);
+							Array.Clear(array2, 0, array2.Length);
+						}
 					}
+					if (infoHash != null)
+					{
+						Array.Clear(infoHash, 0, infoHash.Length);
+					}
+					Array.Clear(array, 0, array.Length);
 					socket.Close();
 					networkStream.Close();
 					networkStream.Dispose();
@@ -2052,13 +2093,51 @@ public class MainForm : Form
 		return new byte[5] { 0, 0, 0, 1, 0 };
 	}
 
+	private bool ReadHandshake(NetworkStream networkStream, byte[] buffer)
+	{
+		int totalRead = 0;
+		while (totalRead < buffer.Length)
+		{
+			int read = networkStream.Read(buffer, totalRead, buffer.Length - totalRead);
+			if (read <= 0)
+			{
+				return false;
+			}
+			totalRead += read;
+		}
+		return true;
+	}
+
+	private static bool HandshakeMatches(byte[] handshake, byte[] infoHash)
+	{
+		if (handshake.Length < 48 || infoHash.Length != 20 || handshake[0] != 19)
+		{
+			return false;
+		}
+		for (int i = 0; i < infoHash.Length; i++)
+		{
+			if (handshake[28 + i] != infoHash[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private byte[] createHandshakeResponse()
 	{
 		int num = 0;
 		Encoding encoding = Encoding.GetEncoding(28591);
 		new StringBuilder();
 		string text = "BitTorrent protocol";
-		byte[] array = new byte[256];
+		byte[] peerId = encoding.GetBytes(currentTorrent.peerID ?? string.Empty);
+		if (peerId.Length != 20)
+		{
+			Array.Clear(peerId, 0, peerId.Length);
+			AddLogLine("Warning: TCP handshake skipped because the peer ID is not 20 bytes.");
+			return null;
+		}
+		byte[] array = new byte[68];
 		array[num++] = (byte)text.Length;
 		encoding.GetBytes(text, 0, text.Length, array, num);
 		num += text.Length;
@@ -2066,18 +2145,27 @@ public class MainForm : Form
 		{
 			array[num++] = 0;
 		}
-		Buffer.BlockCopy(currentTorrentFile.InfoHash, 0, array, num, currentTorrentFile.InfoHash.Length);
-		num += currentTorrentFile.InfoHash.Length;
-		encoding.GetBytes(currentTorrent.peerID.ToCharArray(), 0, currentTorrent.peerID.Length, array, num);
-		num += encoding.GetByteCount(currentTorrent.peerID);
+		byte[] infoHash = currentTorrentFile.InfoHash;
+		Buffer.BlockCopy(infoHash, 0, array, num, infoHash.Length);
+		num += infoHash.Length;
+		Buffer.BlockCopy(peerId, 0, array, num, peerId.Length);
+		Array.Clear(infoHash, 0, infoHash.Length);
+		Array.Clear(peerId, 0, peerId.Length);
 		return array;
 	}
 
 	private void CloseTcpListener()
 	{
-		if (upnPNatEnabled && checkUPnP.Checked)
+		try
 		{
-			upnPNat.RemovePortMapping(TcpListenerMappingInfo);
+			if (upnPNatEnabled && checkUPnP.Checked && TcpListenerMappingInfo != null)
+			{
+				upnPNat.RemovePortMapping(TcpListenerMappingInfo);
+			}
+		}
+		catch (Exception ex)
+		{
+			AddLogLine("Warning: failed to remove UPnP port mapping: " + ex.Message);
 		}
 		if (localListen != null)
 		{
@@ -2150,6 +2238,7 @@ public class MainForm : Form
 		OpenTcpListener();
 		Thread thread = new Thread(startProcess);
 		thread.Name = "startProcess() Thread";
+		thread.IsBackground = true;
 		thread.Start();
 		serverUpdateTimer.Start();
 	}
@@ -2159,6 +2248,7 @@ public class MainForm : Form
 		stopTimerAndCounters();
 		Thread thread = new Thread(stopProcess);
 		thread.Name = "stopProcess() Thread";
+		thread.IsBackground = true;
 		thread.Start();
 	}
 
@@ -2212,7 +2302,6 @@ public class MainForm : Form
 
 	public string ConvertToTime(int seconds)
 	{
-		string text = "";
 		if (seconds < 3600)
 		{
 			return (seconds / 60).ToString("00") + ":" + (seconds % 60).ToString("00");
@@ -2228,12 +2317,24 @@ public class MainForm : Form
 			float num2 = (float)random.Next(100) / 100f;
 			if (checkRandomUpload.Checked)
 			{
-				float num3 = (float)random.Next((int)float.Parse(RandomUploadFrom.Text), (int)float.Parse(RandomUploadTo.Text)) + num;
+				int from = ParseBoundedInt(RandomUploadFrom.Text, 0, 100000000, 0);
+				int to = ParseBoundedInt(RandomUploadTo.Text, 1, 100000001, 1);
+				if (to <= from)
+				{
+					throw new ArgumentException("Random upload maximum must be greater than its minimum.");
+				}
+				float num3 = random.Next(from, to) + num;
 				uploadRate.Text = num3.ToString();
 			}
 			if (checkRandomDownload.Checked)
 			{
-				float num4 = (float)random.Next((int)float.Parse(RandomDownloadFrom.Text), (int)float.Parse(RandomDownloadTo.Text)) + num2;
+				int from = ParseBoundedInt(RandomDownloadFrom.Text, 0, 100000000, 0);
+				int to = ParseBoundedInt(RandomDownloadTo.Text, 1, 100000001, 1);
+				if (to <= from)
+				{
+					throw new ArgumentException("Random download maximum must be greater than its minimum.");
+				}
+				float num4 = random.Next(from, to) + num2;
 				downloadRate.Text = num4.ToString();
 			}
 		}
@@ -2252,7 +2353,10 @@ public class MainForm : Form
 				updateCounters(currentTorrent);
 			}
 			int num = currentTorrent.interval - temporaryIntervalCounter;
-			totalRunningTimeCounter++;
+			if (totalRunningTimeCounter < int.MaxValue)
+			{
+				totalRunningTimeCounter++;
+			}
 			totalRunningTime.Text = ConvertToTime(totalRunningTimeCounter);
 			if (IsStopProcessCondition())
 			{
@@ -2268,6 +2372,7 @@ public class MainForm : Form
 			randomiseSpeeds();
 			OpenTcpListener();
 			Thread thread = new Thread(continueProcess);
+			thread.IsBackground = true;
 			temporaryIntervalCounter = 0;
 			timerValue.Text = "0";
 			thread.Name = "continueProcess() Thread";
@@ -2322,7 +2427,7 @@ public class MainForm : Form
 		comboProxyType.SelectedIndex = 0;
 		stopProcessActionBox.SelectedIndex = 0;
 		applicationSettings.LoadAppSettings();
-		SelectTorrentClientByName("qBittorrent 5.1.0");
+		SelectTorrentClientByName("qBittorrent 5.2.1");
 	}
 
 	private ProxyInfo GetCurrentProxy()
@@ -2361,38 +2466,26 @@ public class MainForm : Form
 
 	private float parseValidFloat(string str, float defVal)
 	{
-		try
+		if (float.TryParse(str, out float value) && float.IsFinite(value) && value >= 0f)
 		{
-			return float.Parse(str);
+			return Math.Min(value, 100000000f);
 		}
-		catch (Exception)
-		{
-			return defVal;
-		}
+		return defVal;
 	}
 
 	private long parseValidInt64(string str, long defVal)
 	{
-		try
-		{
-			return long.Parse(str);
-		}
-		catch (Exception)
-		{
-			return defVal;
-		}
+		return long.TryParse(str, out long value) ? value : defVal;
 	}
 
 	private int ParseValidInt(string str, int defVal)
 	{
-		try
-		{
-			return int.Parse(str);
-		}
-		catch (Exception)
-		{
-			return defVal;
-		}
+		return int.TryParse(str, out int value) ? value : defVal;
+	}
+
+	private static int ParseBoundedInt(string value, int minimum, int maximum, int defaultValue)
+	{
+		return int.TryParse(value, out int parsed) && parsed >= minimum && parsed <= maximum ? parsed : defaultValue;
 	}
 
 	private TorrentInfo getCurrentTorrent()
@@ -2402,6 +2495,10 @@ public class MainForm : Form
 		try
 		{
 			trackerUri = new Uri(trackerAddress.Text);
+			if (trackerUri.Scheme != Uri.UriSchemeHttp && trackerUri.Scheme != Uri.UriSchemeHttps)
+			{
+				throw new UriFormatException("Tracker URL must use HTTP or HTTPS.");
+			}
 		}
 		catch (Exception ex)
 		{
@@ -2412,6 +2509,12 @@ public class MainForm : Form
 		result.trackerUri = trackerUri;
 		result.trackers = GetTorrentTrackers();
 		result.hash = shaHash.Text;
+		if (!Regex.IsMatch(result.hash ?? string.Empty, "^[0-9a-fA-F]{40}$"))
+		{
+			AddLogLine("Error: torrent info hash must contain exactly 40 hexadecimal characters.");
+			result.trackerUri = null;
+			return result;
+		}
 		result.uploadRate = (long)(parseValidFloat(uploadRate.Text, 50f) * 1024f);
 		result.downloadRate = (long)(parseValidFloat(downloadRate.Text, 10f) * 1024f);
 		result.interval = ParseValidInt(interval.Text, 1800);
@@ -2450,9 +2553,21 @@ public class MainForm : Form
 		result.left = result.totalsize;
 		result.filename = torrentFile.Text;
 		result.numberOfPeers = getValueDefault(customPeersNum.Text, currentClient.NumwantInitialValue.ToString());
-		result.port = getValueDefault(customPort.Text, result.port);
+		result.numberOfPeers = ParseBoundedInt(result.numberOfPeers, 0, 1000, currentClient.NumwantInitialValue).ToString();
+		result.port = ParseBoundedInt(getValueDefault(customPort.Text, result.port), 1, 65535, 0).ToString();
+		if (result.port == "0")
+		{
+			AddLogLine("Error: port must be between 1 and 65535.");
+			result.trackerUri = null;
+			return result;
+		}
 		result.key = getValueDefault(customKey.Text, currentClient.Key);
 		result.peerID = getValueDefault(customPeerID.Text, currentClient.PeerID);
+		if (result.key.Length > 256 || result.peerID.Length == 0 || result.peerID.Length > 256)
+		{
+			AddLogLine("Error: generated client identity values are invalid.");
+			result.trackerUri = null;
+		}
 		return result;
 	}
 
@@ -2632,7 +2747,7 @@ public class MainForm : Form
 			{
 				num = 0L;
 			}
-			torrentInfo.uploaded += num;
+			torrentInfo.uploaded = num > long.MaxValue - torrentInfo.uploaded ? long.MaxValue : torrentInfo.uploaded + num;
 		}
 		downloadCount.Text = FormatFileSize(torrentInfo.downloaded);
 		if (!seedMode && torrentInfo.downloadRate > 0)
@@ -2642,8 +2757,9 @@ public class MainForm : Form
 			{
 				num2 = 0L;
 			}
-			torrentInfo.downloaded += num2;
-			torrentInfo.left = torrentInfo.totalsize - torrentInfo.downloaded;
+			long remaining = Math.Max(0L, torrentInfo.totalsize - torrentInfo.downloaded);
+			torrentInfo.downloaded += Math.Min(num2, remaining);
+			torrentInfo.left = Math.Max(0L, torrentInfo.totalsize - torrentInfo.downloaded);
 		}
 		if (torrentInfo.left <= 0)
 		{
@@ -2657,6 +2773,7 @@ public class MainForm : Form
 				temporaryIntervalCounter = 0;
 				Thread thread = new Thread(completedProcess);
 				thread.Name = "completedProcess() Thread";
+				thread.IsBackground = true;
 				thread.Start();
 			}
 		}
@@ -2664,6 +2781,11 @@ public class MainForm : Form
 		if (torrentInfo.totalsize == 0)
 		{
 			fileSize.Text = "100";
+			return;
+		}
+		if (currentTorrentFile == null || currentTorrentFile.totalLength <= 0)
+		{
+			fileSize.Text = "0";
 			return;
 		}
 		float num3 = (float)(currentTorrentFile.totalLength - torrentInfo.left) / (float)currentTorrentFile.totalLength * 100f;
@@ -2676,6 +2798,7 @@ public class MainForm : Form
 		{
 			return;
 		}
+		TrackerResponse trackerResponse = null;
 		try
 		{
 			string scrapeUrlString = getScrapeUrlString(torrentInfo);
@@ -2685,7 +2808,7 @@ public class MainForm : Form
 				return;
 			}
 			Uri reqUri = new Uri(scrapeUrlString);
-			TrackerResponse trackerResponse = MakeWebRequestEx(reqUri);
+			trackerResponse = MakeWebRequestEx(reqUri);
 			if (trackerResponse == null || trackerResponse.Dict == null)
 			{
 				return;
@@ -2698,7 +2821,9 @@ public class MainForm : Form
 			}
 			AddLogLine("---------- Scrape Info -----------");
 			ValueDictionary valueDictionary = (ValueDictionary)trackerResponse.Dict["files"];
-			string key = Encoding.GetEncoding(28591).GetString(currentTorrentFile.InfoHash);
+			byte[] infoHash = currentTorrentFile.InfoHash;
+			string key = Encoding.GetEncoding(28591).GetString(infoHash);
+			Array.Clear(infoHash, 0, infoHash.Length);
 			if (valueDictionary[key].GetType() == typeof(ValueDictionary))
 			{
 				ValueDictionary valueDictionary2 = (ValueDictionary)valueDictionary[key];
@@ -2715,12 +2840,16 @@ public class MainForm : Form
 			}
 			else
 			{
-				AddLogLine("Scrape returned : '" + ((ValueString)valueDictionary[key]).String + "'");
+				AddLogLine("Warning: tracker returned an unexpected scrape value.");
 			}
 		}
 		catch (Exception ex)
 		{
 			AddLogLine("Error: " + ex.Message);
+		}
+		finally
+		{
+			trackerResponse?.ClearSensitiveData();
 		}
 	}
 
@@ -2773,13 +2902,14 @@ public class MainForm : Form
 		}
 		foreach (string text in array)
 		{
+			TrackerResponse trackerResponse = null;
 			try
 			{
 				currentTorrent.tracker = text;
 				currentTorrent.trackerUri = new Uri(text);
 				string urlString = getUrlString(torrentInfo, eventType, text);
 				Uri reqUri = new Uri(urlString);
-				TrackerResponse trackerResponse = MakeWebRequestEx(reqUri);
+				trackerResponse = MakeWebRequestEx(reqUri);
 				if (trackerResponse == null)
 				{
 					trackerError = "No tracker response";
@@ -2811,13 +2941,7 @@ public class MainForm : Form
 					trackerAddress.Text = text;
 				}
 				PeerList peerList = new PeerList();
-				foreach (string key in valueDictionary.Keys)
-				{
-					if (key != "failure reason" && key != "peers")
-					{
-						AddLogLine(key + ": " + BEncode.String(valueDictionary[key]));
-					}
-				}
+				AddLogLine("Tracker response decoded successfully.");
 				if (valueDictionary.Contains("peers"))
 				{
 					haveInitialPeers = true;
@@ -2827,13 +2951,17 @@ public class MainForm : Form
 						text3 = BEncode.String(valueDictionary["peers"]);
 						Encoding encoding = Encoding.GetEncoding(28591);
 						byte[] bytes = encoding.GetBytes(text3);
-						BinaryReader binaryReader = new BinaryReader(new MemoryStream(encoding.GetBytes(text3)));
-						for (int i = 0; i < bytes.Length; i += 6)
+						using BinaryReader binaryReader = new BinaryReader(new MemoryStream(bytes, writable: false));
+						if (bytes.Length % 6 != 0)
+						{
+							AddLogLine("Warning: tracker returned a malformed compact peer list.");
+						}
+						for (int i = 0; i + 6 <= bytes.Length; i += 6)
 						{
 							peerList.Add(new Peer(binaryReader.ReadBytes(4), binaryReader.ReadInt16()));
 						}
-						binaryReader.Close();
-						AddLogLine("peers: " + peerList.ToString());
+						Array.Clear(bytes, 0, bytes.Length);
+						AddLogLine("Tracker returned " + peerList.Count + " peers.");
 					}
 					else if (valueDictionary["peers"] is ValueList)
 					{
@@ -2847,12 +2975,11 @@ public class MainForm : Form
 								peerList.Add(new Peer(BEncode.String(valueDictionary2["ip"]), BEncode.String(valueDictionary2["port"]), BEncode.String(valueDictionary2["peer id"])));
 							}
 						}
-						AddLogLine("peers: " + peerList.ToString());
+						AddLogLine("Tracker returned " + peerList.Count + " peers.");
 					}
 					else
 					{
-						text3 = BEncode.String(valueDictionary["peers"]);
-						AddLogLine("peers(x): " + text3);
+						AddLogLine("Warning: tracker returned peers in an unsupported format.");
 					}
 					if (checkSavePeers.Checked)
 					{
@@ -2878,12 +3005,17 @@ public class MainForm : Form
 					AddLogLine("No peers returned from tracker...setting Upload speed to 0");
 					updateTextBox(uploadRate, "0");
 				}
+				peerList.ClearSensitiveData();
 				return true;
 			}
 			catch (Exception ex)
 			{
 				trackerError = ex.Message;
 				AddLogLine("Tracker failed: " + text + " - " + trackerError);
+			}
+			finally
+			{
+				trackerResponse?.ClearSensitiveData();
 			}
 		}
 		if (!checkIgnoreFailureReason.Checked && !string.IsNullOrEmpty(trackerError))
@@ -2940,22 +3072,33 @@ public class MainForm : Form
 
 	public void AddLogLine(string logLine)
 	{
+		string safeLogLine = SensitiveDataRedactor.Sanitize(logLine);
 		if (logWindow.InvokeRequired)
 		{
 			SetTextCallback method = AddLogLine;
-			Invoke(method, logLine);
+			Invoke(method, safeLogLine);
+			return;
 		}
-		else if (ShouldShowLogLine(logLine))
+		if (IsErrorLogLine(safeLogLine))
+		{
+			RuntimeLog.WriteError(safeLogLine);
+		}
+		else
+		{
+			RuntimeLog.Write(safeLogLine);
+		}
+		if (ShouldShowLogLine(safeLogLine))
 		{
 			try
 			{
 				DateTime now = DateTime.Now;
 				string text = "[" + $"{now:hh:mm:ss}" + "]";
-				logWindow.AppendText(text + " " + logLine + "\r\n");
+				logWindow.AppendText(text + " " + safeLogLine + "\r\n");
 				logWindow.ScrollToCaret();
 			}
-			catch (Exception)
+			catch (Exception ex)
 			{
+				RuntimeLog.WriteException("Failed to update log window", ex);
 			}
 		}
 	}
@@ -2970,15 +3113,20 @@ public class MainForm : Form
 		{
 			return false;
 		}
-		string text = logLine.TrimStart();
-		return text.StartsWith("GET ", StringComparison.OrdinalIgnoreCase)
-			|| text.StartsWith("POST ", StringComparison.OrdinalIgnoreCase)
-			|| text.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase)
-			|| text.StartsWith("----------- Sending Command to Tracker", StringComparison.OrdinalIgnoreCase)
-			|| text.StartsWith("----------- Tracker Response", StringComparison.OrdinalIgnoreCase)
-			|| text.StartsWith("*** Failed to decode tracker response", StringComparison.OrdinalIgnoreCase)
-			|| text.IndexOf("failure reason", StringComparison.OrdinalIgnoreCase) >= 0
-			|| text.IndexOf("tracker response is empty", StringComparison.OrdinalIgnoreCase) >= 0;
+		return IsErrorLogLine(logLine);
+	}
+
+	private static bool IsErrorLogLine(string logLine)
+	{
+		return logLine.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
+			|| logLine.IndexOf("exception", StringComparison.OrdinalIgnoreCase) >= 0
+			|| logLine.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0
+			|| logLine.IndexOf("warning", StringComparison.OrdinalIgnoreCase) >= 0;
+	}
+
+	private void checkLogEnabled_CheckedChanged(object sender, EventArgs e)
+	{
+		RuntimeLog.SetEnabled(checkLogEnabled.Checked);
 	}
 
 	public void ClearLog()
@@ -3026,7 +3174,7 @@ public class MainForm : Form
 		return tcpClient;
 	}
 
-	private TrackerResponse MakeWebRequestExSsl(Uri reqUri)
+	private TrackerResponse MakeWebRequestExSsl(Uri reqUri, int redirectDepth = 0)
 	{
 		TrackerResponse trackerResponse = null;
 		try
@@ -3043,8 +3191,7 @@ public class MainForm : Form
 			text2 = text2.Replace("{javaver}", JavaInfo.Get().CurrentVersion);
 			text2 = text2.Replace("{osver}", OsInfo.Get().ShortVersion);
 			string text3 = NormalizeCommand("GET " + pathAndQuery + " " + currentClient.HttpProtocol + "\r\n" + text2 + "\r\n");
-			AddLogLine("----------- Sending Command to Tracker --------");
-			AddLogLine(text3);
+			AddLogLine("Sending HTTPS announce request to " + SensitiveDataRedactor.TrackerEndpoint(reqUri.ToString()));
 			TrackerSslClient trackerSslClient = new TrackerSslClient(reqUri, this);
 			MemoryStream memoryStream = trackerSslClient.ConnectToServer(text3);
 			if (memoryStream == null)
@@ -3055,14 +3202,21 @@ public class MainForm : Form
 			trackerResponse = new TrackerResponse(memoryStream);
 			if (trackerResponse.doRedirect)
 			{
-				return MakeWebRequestExSsl(new Uri(trackerResponse.RedirectionURL));
+				Uri redirectUri = GetValidTrackerRedirect(reqUri, trackerResponse.RedirectionURL, redirectDepth);
+				if (redirectUri == null)
+				{
+					trackerResponse.ClearSensitiveData();
+					memoryStream.Dispose();
+					return null;
+				}
+				trackerResponse.ClearSensitiveData();
+				memoryStream.Dispose();
+				return MakeWebRequestEx(redirectUri, redirectDepth + 1);
 			}
-			AddLogLine("----------- Tracker Response --------");
-			AddLogLine(trackerResponse.Headers);
+			AddLogLine("Tracker response status: HTTP " + trackerResponse.StatusCode);
 			if (trackerResponse.Dict == null)
 			{
-				AddLogLine("*** Failed to decode tracker response :");
-				AddLogLine(trackerResponse.Body);
+				AddLogLine("Failed to decode tracker response.");
 			}
 			memoryStream.Dispose();
 		}
@@ -3073,11 +3227,11 @@ public class MainForm : Form
 		return trackerResponse;
 	}
 
-	private TrackerResponse MakeWebRequestEx(Uri reqUri)
+	private TrackerResponse MakeWebRequestEx(Uri reqUri, int redirectDepth = 0)
 	{
 		if (reqUri.Scheme.ToLower() == "https")
 		{
-			return MakeWebRequestExSsl(reqUri);
+			return MakeWebRequestExSsl(reqUri, redirectDepth);
 		}
 		Encoding encoding = Encoding.GetEncoding(28591);
 		IProxyClient proxyClient = null;
@@ -3126,15 +3280,15 @@ public class MainForm : Form
 			text3 = text3.Replace("{javaver}", JavaInfo.Get().CurrentVersion);
 			text3 = text3.Replace("{osver}", OsInfo.Get().ShortVersion);
 			string text4 = NormalizeCommand("GET " + text2 + " " + currentClient.HttpProtocol + "\r\n" + text3 + "\r\n");
-			AddLogLine("----------- Sending Command to Tracker --------");
-			AddLogLine(text4);
-			tcpClient.Client.Send(encoding.GetBytes(text4));
+			AddLogLine("Sending HTTP announce request to " + SensitiveDataRedactor.TrackerEndpoint(reqUri.ToString()));
+			byte[] requestBytes = encoding.GetBytes(text4);
+			SendAll(tcpClient.Client, requestBytes);
+			Array.Clear(requestBytes, 0, requestBytes.Length);
 			MemoryStream memoryStream = new MemoryStream();
 			try
 			{
 				byte[] array = new byte[32768];
 				AddLogLine("Waiting for tracker response...");
-				int num2 = 0;
 				while (true)
 				{
 					AddLogLine("Receiving...");
@@ -3145,13 +3299,20 @@ public class MainForm : Form
 						break;
 					}
 					AddLogLine("Received tracker response, length = " + num3);
+					if (memoryStream.Length + num3 > MaxTrackerResponseBytes)
+					{
+						AddLogLine("Tracker response exceeded the 4 MB limit.");
+						memoryStream.Dispose();
+						memoryStream = null;
+						CloseTcpClient(tcpClient);
+						return null;
+					}
 					memoryStream.Write(array, 0, num3);
-					if (isEndOfHttpMessage(array, num3, num2))
+					if (IsCompleteHttpMessage(memoryStream))
 					{
 						AddLogLine("End of HTTP response.");
 						break;
 					}
-					num2++;
 				}
 				if (memoryStream.Length == 0)
 				{
@@ -3164,17 +3325,22 @@ public class MainForm : Form
 				trackerResponse = new TrackerResponse(memoryStream);
 				if (trackerResponse.doRedirect)
 				{
+					Uri redirectUri = GetValidTrackerRedirect(reqUri, trackerResponse.RedirectionURL, redirectDepth);
+					trackerResponse.ClearSensitiveData();
 					memoryStream.Dispose();
 					memoryStream = null;
 					CloseTcpClient(tcpClient);
-					return MakeWebRequestEx(new Uri(trackerResponse.RedirectionURL));
+					if (redirectUri == null)
+					{
+						trackerResponse.ClearSensitiveData();
+						return null;
+					}
+					return MakeWebRequestEx(redirectUri, redirectDepth + 1);
 				}
-				AddLogLine("----------- Tracker Response --------");
-				AddLogLine(trackerResponse.Headers);
+				AddLogLine("Tracker response status: HTTP " + trackerResponse.StatusCode);
 				if (trackerResponse.Dict == null)
 				{
-					AddLogLine("*** Failed to decode tracker response :");
-					AddLogLine(trackerResponse.Body);
+					AddLogLine("Failed to decode tracker response.");
 				}
 				memoryStream.Dispose();
 				memoryStream = null;
@@ -3198,39 +3364,81 @@ public class MainForm : Form
 		return trackerResponse;
 	}
 
-	private bool isEndOfHttpMessage(byte[] data, int dataLen, int chunkNumber)
+	private Uri GetValidTrackerRedirect(Uri currentUri, string redirectUrl, int redirectDepth)
 	{
-		if (dataLen < 4)
+		if (redirectDepth >= MaxTrackerRedirects)
 		{
-			return true;
+			AddLogLine("Tracker redirect limit reached.");
+			return null;
 		}
-		string input = Encoding.ASCII.GetString(data, 0, dataLen);
-		string[] array = Regex.Split(input, "\r\n\r\n", RegexOptions.None);
-		if (chunkNumber == 0 && (array.Length <= 1 || string.IsNullOrEmpty(array[1])))
+		if (!Uri.TryCreate(currentUri, redirectUrl, out Uri redirectUri))
+		{
+			AddLogLine("Tracker redirect URL is invalid.");
+			return null;
+		}
+		if (redirectUri.Scheme != "http" && redirectUri.Scheme != "https")
+		{
+			AddLogLine("Tracker redirect scheme is not allowed: " + redirectUri.Scheme);
+			return null;
+		}
+		return redirectUri;
+	}
+
+	private static void SendAll(Socket socket, byte[] data)
+	{
+		int sent = 0;
+		while (sent < data.Length)
+		{
+			int count = socket.Send(data, sent, data.Length - sent, SocketFlags.None);
+			if (count <= 0)
+			{
+				throw new IOException("The tracker connection closed while sending the request.");
+			}
+			sent += count;
+		}
+	}
+
+	private static bool IsCompleteHttpMessage(MemoryStream stream)
+	{
+		if (!stream.TryGetBuffer(out ArraySegment<byte> segment))
 		{
 			return false;
 		}
-		if (data[dataLen - 1] == 10 && data[dataLen - 2] == 13 && data[dataLen - 3] == 10 && data[dataLen - 4] == 13)
+		byte[] data = segment.Array;
+		int length = checked((int)stream.Length);
+		int headerEnd = -1;
+		for (int i = 0; i + 3 < length; i++)
 		{
-			return true;
-		}
-		Regex regex = new Regex("Content-Length: ([0-9]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-		try
-		{
-			Match match = regex.Match(input);
-			if (match.Success && array.Length > 1)
+			if (data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 13 && data[i + 3] == 10)
 			{
-				int contentLength = int.Parse(match.Groups[1].ToString());
-				int headerLength = Encoding.ASCII.GetByteCount(array[0]) + 4;
-				if (dataLen - headerLength >= contentLength)
+				headerEnd = i + 4;
+				break;
+			}
+		}
+		if (headerEnd < 0)
+		{
+			return false;
+		}
+		string headers = Encoding.ASCII.GetString(data, 0, headerEnd);
+		Match contentLengthMatch = Regex.Match(headers, @"(?im)^Content-Length:\s*(\d+)\s*$");
+		if (contentLengthMatch.Success
+			&& long.TryParse(contentLengthMatch.Groups[1].Value, out long contentLength))
+		{
+			if (contentLength < 0 || contentLength > MaxTrackerResponseBytes)
+			{
+				throw new InvalidDataException("Tracker Content-Length exceeded the 4 MB limit.");
+			}
+			return length - headerEnd >= contentLength;
+		}
+		if (headers.IndexOf("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase) >= 0)
+		{
+			for (int i = headerEnd; i + 4 < length; i++)
+			{
+				if (data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 48 && data[i + 3] == 13 && data[i + 4] == 10)
 				{
 					return true;
 				}
 			}
-		}
-		catch (Exception ex)
-		{
-			AddLogLine("Error: " + ex.Message);
 		}
 		return false;
 	}
@@ -3281,7 +3489,7 @@ public class MainForm : Form
 			{
 				return false;
 			}
-			AddLogLine("Torrent Path=" + torrentFilePath);
+			AddLogLine("Loading torrent file: " + Path.GetFileName(torrentFilePath));
 			FileInfo fileInfo = new FileInfo(torrentFilePath);
 			if (fileInfo.Exists)
 			{
@@ -3435,6 +3643,10 @@ public class MainForm : Form
 
 	private bool ExitRatioMaster()
 	{
+		if (isExiting)
+		{
+			return true;
+		}
 		if (updateProcessStarted)
 		{
 			string caption = lclzManager.TranslateMessage("confirmCloseTitle", "Confirmation");
@@ -3443,11 +3655,36 @@ public class MainForm : Form
 			{
 				return false;
 			}
-			StopButton_Click(null, null);
 		}
+		isExiting = true;
+		stopTimerAndCounters();
+		CloseTcpListener();
 		applicationSettings.SaveAppSettings();
+		ClearSensitiveState();
 		Application.Exit();
 		return true;
+	}
+
+	private void ClearSensitiveState()
+	{
+		currentTorrent.ClearSensitiveData();
+		currentTorrentFile?.ClearSensitiveData();
+		currentTorrentFile = null;
+		currentClient?.ClearSensitiveData();
+		if (TorrentClients != null)
+		{
+			foreach (TorrentClient client in TorrentClients)
+			{
+				client?.ClearSensitiveData();
+			}
+		}
+		customPeerID.Clear();
+		customKey.Clear();
+		textProxyPass.Clear();
+		trackerAddress.Clear();
+		shaHash.Clear();
+		trayIcon.Visible = false;
+		RuntimeLog.Shutdown();
 	}
 
 	private void Form1_Move(object sender, EventArgs e)
@@ -3533,7 +3770,7 @@ public class MainForm : Form
 
 	private void Form1_FormClosing(object sender, FormClosingEventArgs e)
 	{
-		e.Cancel = !ExitRatioMaster();
+		e.Cancel = !isExiting && !ExitRatioMaster();
 	}
 
 	private void downloadRate_TextChanged(object sender, EventArgs e)
@@ -3800,6 +4037,7 @@ public class MainForm : Form
 		currentProxy = GetCurrentProxy();
 		Thread thread = new Thread(TestNetworkConnection);
 		thread.Name = "TestNetworkConnection() Thread";
+		thread.IsBackground = true;
 		thread.Start();
 	}
 

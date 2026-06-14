@@ -251,7 +251,7 @@ public class Socks5ProxyClient : IProxyClient
 		byte[] array = new byte[4] { 5, 2, 0, 2 };
 		stream.Write(array, 0, array.Length);
 		byte[] array2 = new byte[2];
-		stream.Read(array2, 0, array2.Length);
+		ReadExact(stream, array2, 0, array2.Length);
 		byte b = array2[1];
 		switch (b)
 		{
@@ -334,10 +334,24 @@ public class Socks5ProxyClient : IProxyClient
 		destPortBytes.CopyTo(array, 4 + destAddressBytes.Length);
 		stream.Write(array, 0, array.Length);
 		byte[] array2 = new byte[255];
-		stream.Read(array2, 0, array2.Length);
+		ReadExact(stream, array2, 0, 4);
 		if (array2[1] != 0)
 		{
 			HandleProxyCommandError(array2, destinationHost, destinationPort);
+		}
+	}
+
+	private void ReadExact(NetworkStream stream, byte[] buffer, int offset, int count)
+	{
+		int totalRead = 0;
+		while (totalRead < count)
+		{
+			int read = stream.Read(buffer, offset + totalRead, count - totalRead);
+			if (read <= 0)
+			{
+				throw new ProxyException("The proxy destination closed the connection before sending the expected response.");
+			}
+			totalRead += read;
 		}
 	}
 

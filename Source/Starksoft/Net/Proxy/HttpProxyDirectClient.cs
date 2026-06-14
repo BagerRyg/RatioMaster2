@@ -66,10 +66,6 @@ public class HttpProxyDirectClient : IProxyClient
 
 	private int _proxyPort;
 
-	private HttpResponseCodes _respCode;
-
-	private string _respText;
-
 	private TcpClient _tcpClient;
 
 	private IPEndPoint _BindIpEndpoint;

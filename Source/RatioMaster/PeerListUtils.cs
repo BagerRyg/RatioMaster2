@@ -15,7 +15,7 @@ internal class PeerListUtils
 			{
 				return;
 			}
-			string text = Application.StartupPath + "\\PeerLists";
+			string text = AppPaths.PeerListDirectory;
 			if (!Directory.Exists(text))
 			{
 				Directory.CreateDirectory(text);
@@ -23,13 +23,12 @@ internal class PeerListUtils
 			string text2 = text + "\\peerlist_" + Path.GetFileNameWithoutExtension(torrentName) + ".txt";
 			using StreamWriter streamWriter = new StreamWriter(text2, append: false, Encoding.UTF8);
 			streamWriter.WriteLine("Time: " + DateTime.Now);
-			streamWriter.WriteLine("Torrent Path: " + torrentName);
-			streamWriter.WriteLine();
+			streamWriter.WriteLine("Torrent: " + Path.GetFileName(torrentName));
 			foreach (Peer peer in peerList)
 			{
-				streamWriter.WriteLine(peer.ToString());
+				streamWriter.WriteLine(peer.IpAddress + ":" + peer.Port);
 			}
-			mainForm.AddLogLine("Saved Peerlist to: " + text2);
+			mainForm.AddLogLine("Saved peer endpoints without peer IDs.");
 		}
 		catch (Exception ex)
 		{

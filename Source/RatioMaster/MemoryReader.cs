@@ -60,7 +60,7 @@ public class MemoryReader : Form
 
 	private string clientSearchString = "&peer_id=-UT1600-";
 
-	private int absoluteStartOffset;
+	private int absoluteStartOffset = 0;
 
 	private int absoluteEndOffset = 536870911;
 
@@ -76,9 +76,21 @@ public class MemoryReader : Form
 
 	protected override void Dispose(bool disposing)
 	{
-		if (disposing && components != null)
+		if (disposing)
 		{
-			components.Dispose();
+			try
+			{
+				pReader?.Dispose();
+			}
+			catch
+			{
+			}
+			rePeerIdBox?.Clear();
+			reKeyBox?.Clear();
+			reHashBox?.Clear();
+			reSearchStr?.Clear();
+			currentClient = null;
+			components?.Dispose();
 		}
 		base.Dispose(disposing);
 	}
@@ -309,6 +321,10 @@ public class MemoryReader : Form
 			reProgressBar.Value = currentOffset;
 			int bytesReaded;
 			byte[] array = pReader.ReadProcessMemory((IntPtr)currentOffset, bufferSize, out bytesReaded);
+			if (array == null || bytesReaded <= 0)
+			{
+				break;
+			}
 			num = getStringOffsetInsideArray(array);
 			if (num >= 0)
 			{
@@ -346,9 +362,11 @@ public class MemoryReader : Form
 				if (!string.IsNullOrEmpty(customPeersNum.Text))
 				{
 					flag = true;
+					Array.Clear(array, 0, array.Length);
 					break;
 				}
 			}
+			Array.Clear(array, 0, array.Length);
 			currentOffset = currentOffset + (int)bufferSize - 512;
 		}
 		pReader.CloseHandle();

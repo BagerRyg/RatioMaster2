@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Security.Cryptography;
@@ -36,7 +37,7 @@ public class Torrent
 	{
 		get
 		{
-			SHA1 sHA = new SHA1CryptoServiceProvider();
+			using SHA1 sHA = SHA1.Create();
 			return sHA.ComputeHash(data["info"].Encode());
 		}
 	}
@@ -131,8 +132,16 @@ public class Torrent
 		try
 		{
 			fileStream = File.OpenRead(localFilename);
+			if (fileStream.Length <= 0 || fileStream.Length > 64L * 1024L * 1024L)
+			{
+				throw new InvalidDataException("Torrent metadata file size is invalid.");
+			}
 			binaryReader = new BinaryReader(fileStream);
 			data = (ValueDictionary)BEncode.Parse(binaryReader.BaseStream);
+			if (fileStream.Position != fileStream.Length)
+			{
+				throw new InvalidDataException("Torrent metadata contains trailing data.");
+			}
 			LoadTorrent();
 			result = true;
 			binaryReader.Close();
@@ -180,6 +189,10 @@ public class Torrent
 		}
 		ValueDictionary valueDictionary = (ValueDictionary)data["info"];
 		pieceLength = ((ValueNumber)valueDictionary["piece length"]).Integer;
+		if (pieceLength <= 0)
+		{
+			throw new IncompleteTorrentData("Piece length must be positive.");
+		}
 		if (!valueDictionary.Contains("pieces"))
 		{
 			throw new IncompleteTorrentData("No piece hash data");
@@ -204,8 +217,13 @@ public class Torrent
 	private void ParseSingleFile()
 	{
 		ValueDictionary valueDictionary = (ValueDictionary)data["info"];
-		_totalLength = ((ValueNumber)valueDictionary["length"]).Integer;
-		TorrentFile item = new TorrentFile(((ValueNumber)valueDictionary["length"]).Integer, ((ValueString)valueDictionary["name"]).String);
+		long length = ((ValueNumber)valueDictionary["length"]).Integer;
+		if (length < 0)
+		{
+			throw new IncompleteTorrentData("Torrent file length cannot be negative.");
+		}
+		_totalLength = length;
+		TorrentFile item = new TorrentFile(length, ((ValueString)valueDictionary["name"]).String);
 		torrentFiles.Add(item);
 	}
 
@@ -229,8 +247,20 @@ public class Torrent
 				flag = false;
 				text += item3.String;
 			}
-			_totalLength += ((ValueNumber)item2["length"]).Integer;
-			TorrentFile item = new TorrentFile(((ValueNumber)item2["length"]).Integer, text);
+			long length = ((ValueNumber)item2["length"]).Integer;
+			if (length < 0)
+			{
+				throw new IncompleteTorrentData("Torrent file length cannot be negative.");
+			}
+			try
+			{
+				_totalLength = checked(_totalLength + length);
+			}
+			catch (OverflowException)
+			{
+				throw new IncompleteTorrentData("Torrent total size is too large.");
+			}
+			TorrentFile item = new TorrentFile(length, text);
 			torrentFiles.Add(item);
 		}
 	}
@@ -238,5 +268,20 @@ public class Torrent
 	public bool OpenTorrent()
 	{
 		return OpenTorrent(localTorrentFile);
+	}
+
+	public void ClearSensitiveData()
+	{
+		if (infohash != null)
+		{
+			Array.Clear(infohash, 0, infohash.Length);
+		}
+		infohash = null;
+		localTorrentFile = string.Empty;
+		BEncode.Clear(data);
+		data = null;
+		pieceArray = null;
+		torrentFiles?.Clear();
+		_totalLength = 0L;
 	}
 }

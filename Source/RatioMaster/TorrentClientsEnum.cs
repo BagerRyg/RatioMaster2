@@ -104,7 +104,7 @@ internal class TorrentClientsEnum
 			_mainForm.AddLogLine("No uTorrent process found :(");
 			return;
 		}
-		ProcessMemoryReader processMemoryReader = new ProcessMemoryReader();
+		using ProcessMemoryReader processMemoryReader = new ProcessMemoryReader();
 		processMemoryReader.ReadProcess = processesByName[0];
 		_mainForm.AddLogLine("uTorrent process found! Checking version and data offsets :)");
 		processMemoryReader.OpenProcess();
@@ -121,10 +121,7 @@ internal class TorrentClientsEnum
 		internalClients[1].Key = ReadMemoryIdString(processMemoryReader, "utorrent_key", "", 4491828);
 		_mainForm.AddLogLine("Success!!!");
 		_mainForm.AddLogLine("Updated " + internalClients[1].Name);
-		_mainForm.AddLogLine("---> peerID=" + internalClients[1].PeerID);
-		_mainForm.AddLogLine("---> key=" + internalClients[1].Key);
-		_mainForm.AddLogLine("");
-		processMemoryReader.CloseHandle();
+		_mainForm.AddLogLine("Peer ID and key were read without logging their values.");
 	}
 
 	private TorrentClient[] EnumerateExternalClients()
@@ -150,14 +147,7 @@ internal class TorrentClientsEnum
 			}
 			catch (Exception)
 			{
-				MessageBox.Show("Corrupted client file [" + text + "], please remove or fix it", "Critical error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-				try
-				{
-					Process.GetCurrentProcess().Kill();
-				}
-				catch (Exception)
-				{
-				}
+				throw new InvalidDataException("Corrupted client file: " + Path.GetFileName(text));
 			}
 			XmlNode xmlNode = xmlDocument.SelectSingleNode("//client");
 			externalClients[num] = new TorrentClient(getAttribute(xmlNode, "name") + " (author " + getAttribute(xmlNode, "author") + ", ver. " + getAttribute(xmlNode, "version") + ")");
@@ -258,13 +248,25 @@ internal class TorrentClientsEnum
 			case "utorrent_key":
 			{
 				byte[] bytes = pReader.ReadProcessMemory((IntPtr)memOffset, 4u, out bytesReaded);
+				if (bytesReaded != 4)
+				{
+					Array.Clear(bytes, 0, bytes.Length);
+					return "";
+				}
 				text = $"{bytes[3]:X}{bytes[2]:X}{bytes[1]:X}{bytes[0]:X}";
+				Array.Clear(bytes, 0, bytes.Length);
 				break;
 			}
 			case "utorrent_peerid":
 			{
 				byte[] bytes = pReader.ReadProcessMemory((IntPtr)memOffset, 20u, out bytesReaded);
+				if (bytesReaded != 20)
+				{
+					Array.Clear(bytes, 0, bytes.Length);
+					return "";
+				}
 				text = Encoding.GetEncoding(28591).GetString(bytes);
+				Array.Clear(bytes, 0, bytes.Length);
 				text2 = text.Replace(prefix, "");
 				text = ((text2.Length >= text.Length) ? "" : text2);
 				break;

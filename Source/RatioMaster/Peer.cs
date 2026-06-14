@@ -23,8 +23,8 @@ public class Peer
 		try
 		{
 			IpAddress = IPAddress.Parse(ip);
-			Port = (ushort)IPAddress.NetworkToHostOrder(short.Parse(port));
-			Peer_ID = peer_id;
+			Port = ushort.Parse(port);
+			Peer_ID = peer_id ?? string.Empty;
 		}
 		catch (Exception)
 		{
@@ -33,10 +33,11 @@ public class Peer
 
 	public override string ToString()
 	{
-		if (Peer_ID.Length > 0)
-		{
-			return string.Concat(IpAddress, ":", Port, "(PeerID=", Peer_ID, ")");
-		}
 		return string.Concat(IpAddress, ":", Port);
+	}
+
+	public void ClearSensitiveData()
+	{
+		Peer_ID = string.Empty;
 	}
 }

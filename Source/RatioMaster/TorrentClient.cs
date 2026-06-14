@@ -202,4 +202,10 @@ public class TorrentClient
 	{
 		_Name = Name;
 	}
+
+	public void ClearSensitiveData()
+	{
+		_PeerID = string.Empty;
+		_key = string.Empty;
+	}
 }

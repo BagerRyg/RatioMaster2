@@ -7,6 +7,8 @@ namespace BitTorrent;
 
 public class ValueDictionary : BEncodeValue
 {
+	private const int MaxEntries = 100000;
+
 	private Dictionary<string, BEncodeValue> dict = new Dictionary<string, BEncodeValue>();
 
 	public ICollection Values => dict.Values;
@@ -39,6 +41,10 @@ public class ValueDictionary : BEncodeValue
 		byte b = (byte)num;
 		while (b != 101 && num != -1 && char.IsNumber((char)b))
 		{
+			if (dict.Count >= MaxEntries)
+			{
+				throw new TorrentException("Bencoded dictionary exceeded the maximum entry count.");
+			}
 			ValueString valueString = new ValueString();
 			valueString.Parse(s, b);
 			BEncodeValue value = BEncode.Parse(s);
@@ -56,6 +62,10 @@ public class ValueDictionary : BEncodeValue
 			num = s.ReadByte();
 			b = (byte)num;
 		}
+		if (num == -1)
+		{
+			throw new IncompleteTorrentData("Unexpected end of bencoded dictionary.");
+		}
 	}
 
 	public void Add(string key, BEncodeValue value)
@@ -65,7 +75,7 @@ public class ValueDictionary : BEncodeValue
 
 	public void SetStringValue(string key, string value)
 	{
-		if (Contains(value))
+		if (Contains(key))
 		{
 			((ValueString)this[key]).String = value;
 		}
@@ -83,6 +93,15 @@ public class ValueDictionary : BEncodeValue
 	public void Remove(string key)
 	{
 		dict.Remove(key);
+	}
+
+	public void Clear()
+	{
+		foreach (BEncodeValue value in dict.Values)
+		{
+			BEncode.Clear(value);
+		}
+		dict.Clear();
 	}
 
 	public byte[] Encode()

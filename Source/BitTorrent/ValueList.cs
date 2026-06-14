@@ -6,6 +6,8 @@ namespace BitTorrent;
 
 public class ValueList : BEncodeValue, IEnumerable, IEnumerator
 {
+	private const int MaxItems = 100000;
+
 	private Collection<BEncodeValue> values;
 
 	private int Position = -1;
@@ -71,16 +73,34 @@ public class ValueList : BEncodeValue, IEnumerable, IEnumerator
 		byte b = (byte)num;
 		while (b != 101 && num != -1)
 		{
+			if (values.Count >= MaxItems)
+			{
+				throw new TorrentException("Bencoded list exceeded the maximum item count.");
+			}
 			BEncodeValue item = BEncode.Parse(s, b);
 			values.Add(item);
 			num = s.ReadByte();
 			b = (byte)num;
+		}
+		if (num == -1)
+		{
+			throw new IncompleteTorrentData("Unexpected end of bencoded list.");
 		}
 	}
 
 	public void Add(BEncodeValue value)
 	{
 		values.Add(value);
+	}
+
+	public void Clear()
+	{
+		foreach (BEncodeValue value in values)
+		{
+			BEncode.Clear(value);
+		}
+		values.Clear();
+		Position = -1;
 	}
 
 	public byte[] Encode()

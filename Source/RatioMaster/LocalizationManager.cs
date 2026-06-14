@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace RatioMaster;
@@ -14,6 +16,8 @@ public class LocalizationManager
 
 	private string _currentRightToLeft = "";
 
+	private const string DefaultLanguageFile = "1english.lng";
+
 	public LocalizationManager(MainForm mainForm)
 	{
 		_mainForm = mainForm;
@@ -27,9 +31,12 @@ public class LocalizationManager
 		if (!Directory.Exists(LangDir))
 		{
 			_mainForm.AddLogLine("Language directory (/lng) doesn't exists");
-			return null;
+			return list;
 		}
-		string[] files = Directory.GetFiles(LangDir, "*.lng");
+		string[] files = Directory.GetFiles(LangDir, "*.lng")
+			.OrderBy(path => Path.GetFileName(path).Equals(DefaultLanguageFile, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+			.ThenBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase)
+			.ToArray();
 		string[] array = files;
 		foreach (string text in array)
 		{
@@ -38,7 +45,10 @@ public class LocalizationManager
 			langInfo.Name = IniReader.ReadStringFromIni("General", "LanguageName", text);
 			langInfo.Version = IniReader.ReadStringFromIni("General", "Version", text);
 			langInfo.RightToLeft = IniReader.ReadStringFromIni("General", "RightToLeft", text);
-			list.Add(langInfo);
+			if (!string.IsNullOrWhiteSpace(langInfo.Name))
+			{
+				list.Add(langInfo);
+			}
 		}
 		return list;
 	}
@@ -46,24 +56,46 @@ public class LocalizationManager
 	public void LoadLanguageFromFile(string lngFile)
 	{
 		_currentLangDict.Clear();
+		string defaultFile = Path.Combine(LangDir, DefaultLanguageFile);
+		LoadLanguageDictionary(defaultFile);
+		if (!string.Equals(Path.GetFullPath(lngFile), Path.GetFullPath(defaultFile), StringComparison.OrdinalIgnoreCase))
+		{
+			LoadLanguageDictionary(lngFile);
+		}
 		IniReader iniReader = new IniReader(lngFile);
-		_currentRightToLeft = iniReader.ReadString("General", "RightToLeft");
+		_currentRightToLeft = iniReader.ReadString("General", "RightToLeft", "false");
+	}
+
+	private void LoadLanguageDictionary(string lngFile)
+	{
+		if (!File.Exists(lngFile))
+		{
+			return;
+		}
+		IniReader iniReader = new IniReader(lngFile);
 		List<string> sectionList = iniReader.GetSectionList();
 		foreach (string item in sectionList)
 		{
-			Dictionary<string, string> dictionary = new Dictionary<string, string>();
+			if (!_currentLangDict.TryGetValue(item, out Dictionary<string, string> dictionary))
+			{
+				dictionary = new Dictionary<string, string>();
+				_currentLangDict[item] = dictionary;
+			}
 			List<string> keyList = iniReader.GetKeyList(item);
 			foreach (string item2 in keyList)
 			{
-				dictionary[item2] = iniReader.ReadString(item, item2);
+				string value = iniReader.ReadString(item, item2);
+				if (!string.IsNullOrWhiteSpace(value))
+				{
+					dictionary[item2] = value;
+				}
 			}
-			_currentLangDict[item] = dictionary;
 		}
 	}
 
 	public void LocalizeForm(Form _form, bool adjustRightToLeft)
 	{
-		string name = _form.Name;
+		string name = _form is MainForm ? "Form1" : _form.Name;
 		foreach (Control control in _form.Controls)
 		{
 			switch (control.GetType().Name.ToLower())
@@ -171,9 +203,35 @@ public class LocalizationManager
 		string key = "Messages";
 		if (_currentLangDict.ContainsKey(key) && _currentLangDict[key].ContainsKey(messageID))
 		{
-			return string.Format(_currentLangDict[key][messageID].Replace("\\r\\n", "\r\n"), Params);
+			string translated = _currentLangDict[key][messageID].Replace("\\r\\n", "\r\n");
+			if (GetFormatParameters(translated).SetEquals(GetFormatParameters(def)))
+			{
+				try
+				{
+					return string.Format(translated, Params);
+				}
+				catch (FormatException)
+				{
+				}
+			}
 		}
-		_mainForm.AddLogLine(messageID + "=" + def);
 		return string.Format(def, Params);
+	}
+
+	private static HashSet<int> GetFormatParameters(string value)
+	{
+		HashSet<int> parameters = new HashSet<int>();
+		for (int i = 0; i < value.Length - 2; i++)
+		{
+			if (value[i] == '{' && char.IsDigit(value[i + 1]))
+			{
+				int end = value.IndexOf('}', i + 2);
+				if (end > i && int.TryParse(value.Substring(i + 1, end - i - 1), out int index))
+				{
+					parameters.Add(index);
+				}
+			}
+		}
+		return parameters;
 	}
 }

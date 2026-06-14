@@ -6,6 +6,8 @@ namespace BitTorrent;
 
 public class ValueNumber : BEncodeValue
 {
+	private const int MaxNumberLength = 32;
+
 	private string v;
 
 	private byte[] data;
@@ -57,6 +59,16 @@ public class ValueNumber : BEncodeValue
 	{
 	}
 
+	public void Clear()
+	{
+		if (data != null)
+		{
+			Array.Clear(data, 0, data.Length);
+		}
+		data = Array.Empty<byte>();
+		v = string.Empty;
+	}
+
 	public void Parse(Stream s)
 	{
 		string text = string.Empty;
@@ -64,17 +76,25 @@ public class ValueNumber : BEncodeValue
 		char c = (char)num;
 		while (c != 'e' && num != -1)
 		{
+			if (text.Length >= MaxNumberLength)
+			{
+				throw new TorrentException("Bencoded number exceeded the maximum length.");
+			}
 			text += c;
 			num = s.ReadByte();
 			c = (char)num;
+		}
+		if (num == -1)
+		{
+			throw new IncompleteTorrentData("Unexpected end of bencoded number.");
 		}
 		try
 		{
 			String = long.Parse(text).ToString();
 		}
-		catch (Exception)
+		catch (Exception ex)
 		{
-			String = "";
+			throw new TorrentException("Invalid bencoded number: " + ex.Message);
 		}
 	}
 }

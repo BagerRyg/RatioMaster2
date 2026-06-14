@@ -1,215 +1,250 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using BitTorrent;
 
 namespace RatioMaster;
 
 internal class TrackerResponse
 {
+	private const int MaxHeaderBytes = 64 * 1024;
+	private const int MaxDecodedBodyBytes = 4 * 1024 * 1024;
+
 	private string _headers = "";
-
-	private string _body = "";
-
 	private ValueDictionary _dict;
-
 	private string _contentEncoding = "";
-
 	private string _contentType = "";
-
 	private string _charset = "";
-
-	private bool _chunkedEncoding;
-
 	private int _statusCode;
 
 	public string RedirectionURL = "";
-
 	public bool response_status_302;
-
 	public bool doRedirect;
 
 	public int StatusCode => _statusCode;
-
 	public bool IsHttpError => _statusCode >= 400;
-
-	private GZipStream unzipStream;
-
 	public ValueDictionary Dict => _dict;
-
 	public string Headers => _headers;
-
-	public string Body => _body;
-
+	public string Body => "";
 	public string ContentEncoding => _contentEncoding;
-
 	public string ContentType => _contentType;
-
 	public string Charset => _charset;
+
+	public void ClearSensitiveData()
+	{
+		BEncode.Clear(_dict);
+		_dict = null;
+		_headers = string.Empty;
+		RedirectionURL = string.Empty;
+	}
 
 	public TrackerResponse(MemoryStream responseStream)
 	{
-		Stream stream = new MemoryStream();
-		StreamReader streamReader = new StreamReader(responseStream);
-		responseStream.Position = 0L;
-		string newLineStr = getNewLineStr(streamReader);
-		_headers = "";
-		string text;
-		do
+		if (responseStream == null)
 		{
-			text = streamReader.ReadLine();
-			int num;
-			if (text.StartsWith("HTTP/"))
+			throw new ArgumentNullException(nameof(responseStream));
+		}
+
+		byte[] responseBytes = responseStream.ToArray();
+		try
+		{
+			int bodyOffset = FindHeaderEnd(responseBytes);
+			_headers = Encoding.ASCII.GetString(responseBytes, 0, bodyOffset);
+			bool chunked = ParseHeaders(_headers);
+			if (response_status_302 && !string.IsNullOrWhiteSpace(RedirectionURL))
 			{
-				string[] array = text.Split(' ');
-				if (array.Length > 1)
+				doRedirect = true;
+				return;
+			}
+
+			byte[] body = new byte[responseBytes.Length - bodyOffset];
+			Buffer.BlockCopy(responseBytes, bodyOffset, body, 0, body.Length);
+			try
+			{
+				byte[] decoded = chunked ? DecodeChunked(body) : body;
+				if (!ReferenceEquals(decoded, body))
 				{
-					int.TryParse(array[1], out _statusCode);
+					Array.Clear(body, 0, body.Length);
 				}
-			}
-			if ((num = text.IndexOf("302 Found")) >= 0 || (num = text.IndexOf("302 Moved")) >= 0)
-			{
-				response_status_302 = true;
-			}
-			else if ((num = text.IndexOf("Location: ")) >= 0)
-			{
-				RedirectionURL = text.Substring(num + 10);
-			}
-			else if ((num = text.IndexOf("Content-Encoding: ")) >= 0)
-			{
-				_contentEncoding = text.Substring(num + 18).ToLower();
-			}
-			else if ((num = text.IndexOf("Content-Type: ")) >= 0)
-			{
-				_contentType = text.Substring(num + 14).ToLower();
-			}
-			else if ((num = text.IndexOf("charset=")) >= 0)
-			{
-				_charset = text.Substring(num + 8).ToLower();
-			}
-			else if ((num = text.IndexOf("Transfer-Encoding: chunked")) >= 0)
-			{
-				_chunkedEncoding = true;
-			}
-			_headers = _headers + text + newLineStr;
-		}
-		while (text.Length != 0);
-		responseStream.Position = _headers.Length;
-		if (response_status_302 && RedirectionURL != "")
-		{
-			doRedirect = true;
-			return;
-		}
-		if (_chunkedEncoding)
-		{
-			string text2 = "";
-			text2 = streamReader.ReadLine();
-			int num2 = Convert.ToInt32(text2.Split(' ')[0], 16);
-			while (num2 > 0)
-			{
-				byte[] buffer = new byte[num2];
-				responseStream.Position = responseStream.Position + text2.Length + newLineStr.Length;
-				responseStream.Read(buffer, 0, num2);
-				stream.Write(buffer, 0, num2);
-				streamReader.ReadLine();
-				text2 = streamReader.ReadLine();
-				responseStream.Position += newLineStr.Length;
-				try
+				if (_contentEncoding == "gzip" || _contentEncoding == "x-gzip")
 				{
-					num2 = Convert.ToInt32(text2.Split(' ')[0], 16);
+					byte[] decompressed = Decompress(decoded);
+					Array.Clear(decoded, 0, decoded.Length);
+					decoded = decompressed;
 				}
-				catch (Exception)
+				if (decoded.Length > MaxDecodedBodyBytes)
 				{
-					num2 = 0;
+					throw new InvalidDataException("Decoded tracker response exceeded the 4 MB limit.");
 				}
+				using MemoryStream bodyStream = new MemoryStream(decoded, writable: false);
+				_dict = BEncode.Parse(bodyStream) as ValueDictionary;
+				Array.Clear(decoded, 0, decoded.Length);
+			}
+			catch
+			{
+				Array.Clear(body, 0, body.Length);
+				throw;
 			}
 		}
-		else
+		finally
 		{
-			byte[] array = new byte[responseStream.Length - responseStream.Position];
-			responseStream.Read(array, 0, array.Length);
-			stream.Write(array, 0, array.Length);
-		}
-		stream.Position = 0L;
-		_dict = parseBEncodeDict((MemoryStream)stream);
-		stream.Position = 0L;
-		StreamReader streamReader2 = new StreamReader(stream);
-		_body = streamReader2.ReadToEnd();
-		stream.Dispose();
-		streamReader2.Dispose();
-		streamReader.Dispose();
-		if (unzipStream != null)
-		{
-			unzipStream.Dispose();
+			Array.Clear(responseBytes, 0, responseBytes.Length);
 		}
 	}
 
-	private string getNewLineStr(StreamReader streamReader)
+	private bool ParseHeaders(string headers)
 	{
-		long position = streamReader.BaseStream.Position;
-		string result = "\r";
-		char c;
-		do
+		bool chunked = false;
+		string[] lines = headers.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		if (lines.Length > 0)
 		{
-			c = (char)streamReader.BaseStream.ReadByte();
+			string[] statusParts = lines[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			if (statusParts.Length > 1)
+			{
+				int.TryParse(statusParts[1], NumberStyles.None, CultureInfo.InvariantCulture, out _statusCode);
+			}
 		}
-		while (c != '\r' && c != '\n');
-		if (c == '\r' && (ushort)streamReader.BaseStream.ReadByte() == 10)
+		response_status_302 = _statusCode == 301 || _statusCode == 302 || _statusCode == 303 || _statusCode == 307 || _statusCode == 308;
+		for (int i = 1; i < lines.Length; i++)
 		{
-			result = "\r\n";
+			int separator = lines[i].IndexOf(':');
+			if (separator <= 0)
+			{
+				continue;
+			}
+			string name = lines[i].Substring(0, separator).Trim();
+			string value = lines[i].Substring(separator + 1).Trim();
+			if (name.Equals("Location", StringComparison.OrdinalIgnoreCase))
+			{
+				RedirectionURL = value;
+			}
+			else if (name.Equals("Content-Encoding", StringComparison.OrdinalIgnoreCase))
+			{
+				_contentEncoding = value.ToLowerInvariant();
+			}
+			else if (name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+			{
+				_contentType = value.ToLowerInvariant();
+				int charsetIndex = value.IndexOf("charset=", StringComparison.OrdinalIgnoreCase);
+				if (charsetIndex >= 0)
+				{
+					_charset = value.Substring(charsetIndex + 8).Trim().ToLowerInvariant();
+				}
+			}
+			else if (name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase)
+				&& value.IndexOf("chunked", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				chunked = true;
+			}
 		}
-		streamReader.BaseStream.Position = position;
+		return chunked;
+	}
+
+	private static int FindHeaderEnd(byte[] data)
+	{
+		int limit = Math.Min(data.Length, MaxHeaderBytes);
+		for (int i = 0; i < limit - 1; i++)
+		{
+			if (i + 3 < limit && data[i] == 13 && data[i + 1] == 10 && data[i + 2] == 13 && data[i + 3] == 10)
+			{
+				return i + 4;
+			}
+			if (data[i] == 10 && data[i + 1] == 10)
+			{
+				return i + 2;
+			}
+		}
+		throw new InvalidDataException("Tracker response does not contain a valid HTTP header terminator.");
+	}
+
+	private static byte[] DecodeChunked(byte[] body)
+	{
+		using MemoryStream output = new MemoryStream();
+		int position = 0;
+		while (true)
+		{
+			string sizeLine = ReadAsciiLine(body, ref position);
+			int extension = sizeLine.IndexOf(';');
+			if (extension >= 0)
+			{
+				sizeLine = sizeLine.Substring(0, extension);
+			}
+			if (!int.TryParse(sizeLine.Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int chunkSize) || chunkSize < 0)
+			{
+				throw new InvalidDataException("Tracker returned an invalid chunk size.");
+			}
+			if (chunkSize == 0)
+			{
+				break;
+			}
+			if (chunkSize > MaxDecodedBodyBytes - output.Length || position > body.Length - chunkSize)
+			{
+				throw new InvalidDataException("Tracker chunk exceeded the response limit.");
+			}
+			output.Write(body, position, chunkSize);
+			position += chunkSize;
+			ConsumeLineEnding(body, ref position);
+		}
+		return output.ToArray();
+	}
+
+	private static string ReadAsciiLine(byte[] data, ref int position)
+	{
+		int start = position;
+		while (position < data.Length && data[position] != 10 && data[position] != 13)
+		{
+			position++;
+			if (position - start > 128)
+			{
+				throw new InvalidDataException("Tracker chunk header is too long.");
+			}
+		}
+		if (position >= data.Length)
+		{
+			throw new InvalidDataException("Tracker chunk header is incomplete.");
+		}
+		string result = Encoding.ASCII.GetString(data, start, position - start);
+		ConsumeLineEnding(data, ref position);
 		return result;
 	}
 
-	private ValueDictionary parseBEncodeDict(MemoryStream responseStream)
+	private static void ConsumeLineEnding(byte[] data, ref int position)
 	{
-		ValueDictionary result = null;
-		if (_contentEncoding == "gzip" || _contentEncoding == "x-gzip")
+		if (position < data.Length && data[position] == 13)
 		{
-			unzipStream = new GZipStream(responseStream, CompressionMode.Decompress);
-			try
-			{
-				result = (ValueDictionary)BEncode.Parse(unzipStream);
-			}
-			catch (Exception ex)
-			{
-				Console.Write(ex.StackTrace);
-				try
-				{
-					result = (ValueDictionary)BEncode.Parse(responseStream);
-				}
-				catch (Exception ex2)
-				{
-					Console.Write(ex2.StackTrace);
-				}
-			}
+			position++;
 		}
-		else
+		if (position >= data.Length || data[position] != 10)
 		{
-			try
-			{
-				result = (ValueDictionary)BEncode.Parse(responseStream);
-			}
-			catch (Exception ex3)
-			{
-				Console.Write(ex3.StackTrace);
-			}
+			throw new InvalidDataException("Tracker chunk line ending is invalid.");
 		}
-		return result;
+		position++;
 	}
 
-	private void saveArrayToFile(byte[] arr, string filename)
+	private static byte[] Decompress(byte[] compressed)
 	{
-		FileStream fileStream = File.OpenWrite(filename);
-		fileStream.Write(arr, 0, arr.Length);
-		fileStream.Close();
-	}
-
-	private void saveStreamToFile(MemoryStream ms, string filename)
-	{
-		FileStream fileStream = File.OpenWrite(filename);
-		ms.WriteTo(fileStream);
-		fileStream.Close();
+		using MemoryStream input = new MemoryStream(compressed, writable: false);
+		using GZipStream gzip = new GZipStream(input, CompressionMode.Decompress);
+		using MemoryStream output = new MemoryStream();
+		byte[] buffer = new byte[8192];
+		try
+		{
+			int read;
+			while ((read = gzip.Read(buffer, 0, buffer.Length)) > 0)
+			{
+				if (output.Length + read > MaxDecodedBodyBytes)
+				{
+					throw new InvalidDataException("Decompressed tracker response exceeded the 4 MB limit.");
+				}
+				output.Write(buffer, 0, read);
+			}
+			return output.ToArray();
+		}
+		finally
+		{
+			Array.Clear(buffer, 0, buffer.Length);
+		}
 	}
 }

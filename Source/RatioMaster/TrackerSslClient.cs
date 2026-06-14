@@ -10,6 +10,7 @@ namespace RatioMaster;
 internal class TrackerSslClient
 {
 	private const int TrackerSocketTimeoutMs = 15000;
+	private const int MaxTrackerResponseBytes = 4 * 1024 * 1024;
 
 	private TcpClient _client;
 
@@ -41,15 +42,19 @@ internal class TrackerSslClient
 				sslStream.ReadTimeout = TrackerSocketTimeoutMs;
 				sslStream.WriteTimeout = TrackerSocketTimeoutMs;
 				byte[] bytes = Encoding.UTF8.GetBytes(msg);
-				Console.WriteLine("Sending message to server: " + msg);
 				sslStream.Write(bytes, 0, bytes.Length);
 				sslStream.Flush();
+				Array.Clear(bytes, 0, bytes.Length);
 				byte[] array = new byte[32768];
 				while (true)
 				{
 					int num = sslStream.Read(array, 0, array.Length);
 					if (num != 0)
 					{
+						if (memoryStream.Length + num > MaxTrackerResponseBytes)
+						{
+							throw new IOException("Tracker response exceeded the 4 MB limit.");
+						}
 						memoryStream.Write(array, 0, num);
 						continue;
 					}
@@ -65,6 +70,7 @@ internal class TrackerSslClient
 		{
 			return memoryStream;
 		}
+		memoryStream.Dispose();
 		return null;
 	}
 
@@ -77,10 +83,10 @@ internal class TrackerSslClient
 		case SslPolicyErrors.RemoteCertificateChainErrors:
 			_mainForm.AddLogLine("The X509Chain.ChainStatus returned an array of X509ChainStatus objects containing error information.");
 			_mainForm.AddLogLine(sslPolicyErrors.ToString());
-			return true;
+			return false;
 		case SslPolicyErrors.RemoteCertificateNameMismatch:
 			_mainForm.AddLogLine("There was a mismatch of the name on a certificate.");
-			return true;
+			return false;
 		case SslPolicyErrors.RemoteCertificateNotAvailable:
 			_mainForm.AddLogLine("No certificate was available.");
 			break;
