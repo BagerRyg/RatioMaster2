@@ -1,6 +1,5 @@
 .tools/
-Build */
-Build*/
+/Build [0-9]*/
 Docker/
 Torrents Config/
 SECURITY_AUDIT_REPORT.md
