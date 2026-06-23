@@ -17,6 +17,8 @@ public class ApplicationSettings
 
 	private bool _checkLogEnabled;
 
+	private bool _checkHideConfidentialInfo = true;
+
 	private bool _checkRequestScrap;
 
 	private bool _checkShowTrayBaloon;
@@ -184,6 +186,18 @@ public class ApplicationSettings
 		set
 		{
 			_checkLogEnabled = value;
+		}
+	}
+
+	public bool checkHideConfidentialInfo
+	{
+		get
+		{
+			return _checkHideConfidentialInfo;
+		}
+		set
+		{
+			_checkHideConfidentialInfo = value;
 		}
 	}
 
@@ -586,6 +600,7 @@ public class ApplicationSettings
 			interval = _mainForm.interval.Text;
 			TorrentClientsIndex = _mainForm.TorrentClientsBox.SelectedIndex;
 			checkLogEnabled = _mainForm.checkLogEnabled.Checked;
+			checkHideConfidentialInfo = _mainForm.checkHideConfidentialInfo.Checked;
 			checkRequestScrap = _mainForm.checkRequestScrap.Checked;
 			checkShowTrayBaloon = _mainForm.checkShowTrayBaloon.Checked;
 			checkTCPListen = _mainForm.checkTCPListen.Checked;
@@ -744,6 +759,7 @@ public class ApplicationSettings
 			_mainForm.interval.Text = myAppSettings.interval;
 			_mainForm.TorrentClientsBox.SelectedIndex = ClampIndex(myAppSettings.TorrentClientsIndex, _mainForm.TorrentClientsBox.Items.Count);
 			_mainForm.checkLogEnabled.Checked = myAppSettings.checkLogEnabled;
+			_mainForm.checkHideConfidentialInfo.Checked = myAppSettings.checkHideConfidentialInfo;
 			_mainForm.checkRequestScrap.Checked = myAppSettings.checkRequestScrap;
 			_mainForm.checkShowTrayBaloon.Checked = myAppSettings.checkShowTrayBaloon;
 			_mainForm.checkTCPListen.Checked = myAppSettings.checkTCPListen;

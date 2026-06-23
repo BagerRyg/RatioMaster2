@@ -144,6 +144,8 @@ public class MainForm : Form
 
 	public CheckBox checkLogEnabled;
 
+	public CheckBox checkHideConfidentialInfo;
+
 	public Button clearLogButton;
 
 	private RichTextBox logWindow;
@@ -498,6 +500,7 @@ public class MainForm : Form
 		this.tabLog = new System.Windows.Forms.TabPage();
 		this.saveLogButton = new RatioMaster.DarkButton();
 		this.checkLogEnabled = new RatioMaster.DarkCheckBox();
+		this.checkHideConfidentialInfo = new RatioMaster.DarkCheckBox();
 		this.clearLogButton = new RatioMaster.DarkButton();
 		this.logWindow = new RatioMaster.DarkRichTextBox();
 		this.tabNetwork = new System.Windows.Forms.TabPage();
@@ -788,7 +791,7 @@ public class MainForm : Form
 		this.versionAboutLabel.Name = "versionAboutLabel";
 		this.versionAboutLabel.Size = new System.Drawing.Size(520, 25);
 		this.versionAboutLabel.TabIndex = 1;
-		this.versionAboutLabel.Text = "Build 72 using .NET 10.0";
+		this.versionAboutLabel.Text = "Build 73 using .NET 10.0";
 		this.versionAboutLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 		this.label2.AutoSize = false;
 		this.label2.BackColor = System.Drawing.Color.Transparent;
@@ -805,6 +808,7 @@ public class MainForm : Form
 		this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 		this.tabLog.Controls.Add(this.saveLogButton);
 		this.tabLog.Controls.Add(this.checkLogEnabled);
+		this.tabLog.Controls.Add(this.checkHideConfidentialInfo);
 		this.tabLog.Controls.Add(this.clearLogButton);
 		this.tabLog.Controls.Add(this.logWindow);
 		this.tabLog.Location = new System.Drawing.Point(4, 22);
@@ -820,13 +824,22 @@ public class MainForm : Form
 		this.saveLogButton.TabIndex = 16;
 		this.saveLogButton.Text = "Save Log";
 		this.saveLogButton.Click += new System.EventHandler(saveLogButton_Click);
-		this.checkLogEnabled.Location = new System.Drawing.Point(6, 317);
+		this.checkLogEnabled.Location = new System.Drawing.Point(6, 295);
 		this.checkLogEnabled.Name = "checkLogEnabled";
 		this.checkLogEnabled.Size = new System.Drawing.Size(184, 17);
 		this.checkLogEnabled.TabIndex = 15;
 		this.checkLogEnabled.Text = "Enable full logging";
 		this.checkLogEnabled.UseVisualStyleBackColor = true;
 		this.checkLogEnabled.CheckedChanged += new System.EventHandler(checkLogEnabled_CheckedChanged);
+		this.checkHideConfidentialInfo.Checked = true;
+		this.checkHideConfidentialInfo.CheckState = System.Windows.Forms.CheckState.Checked;
+		this.checkHideConfidentialInfo.Location = new System.Drawing.Point(6, 317);
+		this.checkHideConfidentialInfo.Name = "checkHideConfidentialInfo";
+		this.checkHideConfidentialInfo.Size = new System.Drawing.Size(184, 17);
+		this.checkHideConfidentialInfo.TabIndex = 17;
+		this.checkHideConfidentialInfo.Text = "Hide confidential info";
+		this.checkHideConfidentialInfo.UseVisualStyleBackColor = true;
+		this.checkHideConfidentialInfo.CheckedChanged += new System.EventHandler(checkHideConfidentialInfo_CheckedChanged);
 		this.clearLogButton.Location = new System.Drawing.Point(480, 317);
 		this.clearLogButton.Name = "clearLogButton";
 		this.clearLogButton.Size = new System.Drawing.Size(109, 23);
@@ -836,7 +849,7 @@ public class MainForm : Form
 		this.logWindow.Location = new System.Drawing.Point(6, 6);
 		this.logWindow.Name = "logWindow";
 		this.logWindow.ReadOnly = true;
-		this.logWindow.Size = new System.Drawing.Size(585, 307);
+		this.logWindow.Size = new System.Drawing.Size(585, 283);
 		this.logWindow.TabIndex = 13;
 		this.logWindow.Text = "";
 		this.logWindow.WordWrap = false;
@@ -1436,24 +1449,24 @@ public class MainForm : Form
 		this.applyStopSettingsButton.Click += new System.EventHandler(applyStopSettingsButton_Click);
 		this.stopProcessUnitsBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.stopProcessUnitsBox.FormattingEnabled = true;
-		this.stopProcessUnitsBox.Location = new System.Drawing.Point(358, 88);
+		this.stopProcessUnitsBox.Location = new System.Drawing.Point(398, 88);
 		this.stopProcessUnitsBox.Name = "stopProcessUnitsBox";
-		this.stopProcessUnitsBox.Size = new System.Drawing.Size(79, 21);
+		this.stopProcessUnitsBox.Size = new System.Drawing.Size(58, 21);
 		this.stopProcessUnitsBox.TabIndex = 23;
 		this.stopProcessUnitsBox.Visible = false;
 		this.stopProcessActionBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.stopProcessActionBox.FormattingEnabled = true;
-		this.stopProcessActionBox.Items.AddRange(new object[4] { "Do not stop", "Uploaded", "Downloaded", "Time" });
+		this.stopProcessActionBox.Items.AddRange(new object[5] { "Do not stop", "Uploaded", "Downloaded", "Time", "Seeded 1.2x" });
 		this.stopProcessActionBox.Location = new System.Drawing.Point(174, 88);
 		this.stopProcessActionBox.Name = "stopProcessActionBox";
-		this.stopProcessActionBox.Size = new System.Drawing.Size(92, 21);
+		this.stopProcessActionBox.Size = new System.Drawing.Size(150, 21);
 		this.stopProcessActionBox.TabIndex = 22;
 		this.toolTip1.SetToolTip(this.stopProcessActionBox, "RM can stop process automatically .\r\nChoose between different options and enter values.");
 		this.stopProcessActionBox.SelectedIndexChanged += new System.EventHandler(stopProcessActionBox_SelectedIndexChanged);
 		this.stopProcessActionBox.DropDown += new System.EventHandler(stopProcessActionBox_DropDown);
-		this.stopProcessValue.Location = new System.Drawing.Point(272, 89);
+		this.stopProcessValue.Location = new System.Drawing.Point(330, 89);
 		this.stopProcessValue.Name = "stopProcessValue";
-		this.stopProcessValue.Size = new System.Drawing.Size(80, 20);
+		this.stopProcessValue.Size = new System.Drawing.Size(62, 20);
 		this.stopProcessValue.TabIndex = 21;
 		this.stopProcessValue.Text = "1000";
 		this.stopProcessValue.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
@@ -1701,7 +1714,7 @@ public class MainForm : Form
 	{
 		applicationSettings = new ApplicationSettings(this);
 		TorrentClientsObj = new TorrentClientsEnum(this);
-		versionAboutLabel.Text = "Build 72 using .NET 10.0";
+		versionAboutLabel.Text = "Build 73 using .NET 10.0";
 		InitLocalization();
 		deployDefaultValues();
 		TorrentClientsBox_SelectedIndexChanged(null, null);
@@ -1884,6 +1897,7 @@ public class MainForm : Form
 		stopProcessActionBox.Items[1] = lclzManager.TranslateMessage("stopProcessOpt2", "Uploaded");
 		stopProcessActionBox.Items[2] = lclzManager.TranslateMessage("stopProcessOpt3", "Downloaded");
 		stopProcessActionBox.Items[3] = lclzManager.TranslateMessage("stopProcessOpt4", "Time");
+		stopProcessActionBox.Items[4] = lclzManager.TranslateMessage("stopProcessOpt5", "Seeded 1.2x");
 		restoreToolStripMenuItem.Text = lclzManager.TranslateMessage("restoreToolStripMenuItem", "Restore");
 		exitToolStripMenuItem.Text = lclzManager.TranslateMessage("exitToolStripMenuItem", "Exit");
 		comboBindIp.Items[0] = new KeyValuePair("default", lclzManager.TranslateMessage("defaultBinding", "Default"));
@@ -3072,13 +3086,13 @@ public class MainForm : Form
 
 	public void AddLogLine(string logLine)
 	{
-		string safeLogLine = SensitiveDataRedactor.Sanitize(logLine);
 		if (logWindow.InvokeRequired)
 		{
 			SetTextCallback method = AddLogLine;
-			Invoke(method, safeLogLine);
+			Invoke(method, logLine);
 			return;
 		}
+		string safeLogLine = checkHideConfidentialInfo.Checked ? SensitiveDataRedactor.Sanitize(logLine) : logLine;
 		if (IsErrorLogLine(safeLogLine))
 		{
 			RuntimeLog.WriteError(safeLogLine);
@@ -3127,6 +3141,14 @@ public class MainForm : Form
 	private void checkLogEnabled_CheckedChanged(object sender, EventArgs e)
 	{
 		RuntimeLog.SetEnabled(checkLogEnabled.Checked);
+	}
+
+	private void checkHideConfidentialInfo_CheckedChanged(object sender, EventArgs e)
+	{
+		if (checkHideConfidentialInfo.Checked)
+		{
+			logWindow.Text = SensitiveDataRedactor.Sanitize(logWindow.Text);
+		}
 	}
 
 	public void ClearLog()
@@ -3867,6 +3889,10 @@ public class MainForm : Form
 			stopProcessUnitsBox.Items.Add(lclzManager.TranslateMessage("stopProcessUnits3", "Hours"));
 			stopProcessUnitsBox.SelectedIndex = selectedIndex;
 			break;
+		case 4:
+			stopProcessValue.Visible = false;
+			stopProcessUnitsBox.Visible = false;
+			break;
 		}
 	}
 
@@ -3904,8 +3930,25 @@ public class MainForm : Form
 			}
 			result = ((totalRunningTimeCounter > num) ? true : false);
 			break;
+		case 4:
+			long seedTarget = GetSeededOnePointTwoTarget();
+			result = seedTarget > 0 && currentTorrent.uploaded >= seedTarget;
+			break;
 		}
 		return result;
+	}
+
+	private long GetSeededOnePointTwoTarget()
+	{
+		if (currentTorrentFile == null || currentTorrentFile.totalLength <= 0)
+		{
+			return 0L;
+		}
+		if (currentTorrentFile.totalLength > long.MaxValue / 12L)
+		{
+			return long.MaxValue;
+		}
+		return (currentTorrentFile.totalLength * 12L + 9L) / 10L;
 	}
 
 	private long GetStopProcessUnitsMultiplyer()

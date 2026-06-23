@@ -1,0 +1,8 @@
+<client name="Burst 3.1.0b" author="RatioMaster" version="1.0" processname="btdownloadheadless">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;key={key}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;compact=1{event}</query> 
+  <headers>Host: {host}_nl_Accept-Encoding: gzip_nl_User-Agent: BitTorrent/brst1.1.3_nl_</headers>
+  <peer_id prefix="Mbrst1-1-3" type="hex" length="10" urlencoding="false" upperCase="false" value=""/>
+  <key type="hex" length="8" urlencoding="false" upperCase="false" value=""/>
+  <protocol value="HTTP/1.0"/>
+  <hash upperCase="true"/>
+</client>

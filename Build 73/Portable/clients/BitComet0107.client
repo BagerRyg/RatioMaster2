@@ -1,0 +1,8 @@
+<client name="BitComet 1.07" author="SB-Innovation" version="1.0" processname="bitcomet">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;natmapped=1&amp;localip={localip}&amp;port_type=wan&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;numwant={numwant}&amp;compact=1&amp;no_peer_id=1&amp;key={key}{event}</query>
+	<headers>Host: {host}_nl_Connection: close_nl_Accpet: */*_nl_Accept-Encoding: gzip_nl_User-Agent: BitComet/1.7.12.3_nl_Pragma: no-cache_nl_Cache-Control: no-cache_nl_</headers>
+	<peer_id prefix="-BC0107-" type="random" length="12" urlencoding="true" upperCase="true" value="" />
+	<key type="numeric" length="5" urlencoding="false" upperCase="false" value=""/>
+	<protocol value="HTTP/1.1"/>
+	<hash upperCase="true"/>
+</client>

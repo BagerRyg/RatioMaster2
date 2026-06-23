@@ -1,0 +1,10 @@
+<client name="rTorrent 0.16.12 / ruTorrent 5.3.1" author="RygTech" version="1.0" processname="rtorrent">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;key={key}&amp;compact=1&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}{event}</query>
+  <headers>User-Agent: rtorrent/0.16.12_nl_Accept: */*_nl_Accept-Encoding: deflate, gzip_nl_Host: {host}_nl_</headers>
+  <peer_id prefix="-lt100B-" type="random" length="12" urlencoding="true" upperCase="false" value=""/>
+  <key type="hex" length="8" urlencoding="false" upperCase="false" lowerCase="true" value=""/>
+  <protocol value="HTTP/1.1"/>
+  <hash upperCase="false"/>
+  <urlencoding exceptions="-"/>
+  <numwant value="50" randomize="false"/>
+</client>

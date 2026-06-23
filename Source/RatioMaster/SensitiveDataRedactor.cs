@@ -17,6 +17,10 @@ internal static class SensitiveDataRedactor
 		@"(?i)PeerID\s*=\s*[^),;\s]+",
 		RegexOptions.Compiled);
 
+	private static readonly Regex SensitivePlainText = new Regex(
+		@"(?i)\b(peer\s*id|peer_id|info\s*hash|info_hash|key)\s*[:=]\s*[^),;\s]+",
+		RegexOptions.Compiled);
+
 	public static string Sanitize(string value)
 	{
 		if (string.IsNullOrEmpty(value))
@@ -26,6 +30,11 @@ internal static class SensitiveDataRedactor
 
 		string sanitized = SensitiveQueryValue.Replace(value, "$1=[redacted]");
 		sanitized = PeerIdText.Replace(sanitized, "PeerID=[redacted]");
+		sanitized = SensitivePlainText.Replace(sanitized, match =>
+		{
+			int separatorIndex = match.Value.IndexOfAny(new[] { ':', '=' });
+			return separatorIndex < 0 ? match.Value : match.Value.Substring(0, separatorIndex + 1) + "[redacted]";
+		});
 		return Url.Replace(sanitized, match => SanitizeUrl(match.Value));
 	}
 
