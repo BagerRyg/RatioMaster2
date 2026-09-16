@@ -15,6 +15,8 @@ public class ApplicationSettings
 
 	private int _TorrentClientsIndex;
 
+	public string TorrentClientId { get; set; }
+
 	private bool _checkLogEnabled;
 
 	private bool _checkHideConfidentialInfo = true;
@@ -599,6 +601,7 @@ public class ApplicationSettings
 			downloadRate = _mainForm.downloadRate.Text;
 			interval = _mainForm.interval.Text;
 			TorrentClientsIndex = _mainForm.TorrentClientsBox.SelectedIndex;
+			TorrentClientId = _mainForm.getCurrentClient()?.ProfileId;
 			checkLogEnabled = _mainForm.checkLogEnabled.Checked;
 			checkHideConfidentialInfo = _mainForm.checkHideConfidentialInfo.Checked;
 			checkRequestScrap = _mainForm.checkRequestScrap.Checked;
@@ -757,7 +760,7 @@ public class ApplicationSettings
 			_mainForm.uploadRate.Text = myAppSettings.uploadRate;
 			_mainForm.downloadRate.Text = myAppSettings.downloadRate;
 			_mainForm.interval.Text = myAppSettings.interval;
-			_mainForm.TorrentClientsBox.SelectedIndex = ClampIndex(myAppSettings.TorrentClientsIndex, _mainForm.TorrentClientsBox.Items.Count);
+			_mainForm.RestoreTorrentClientSelection(myAppSettings.TorrentClientId, myAppSettings.TorrentClientsIndex);
 			_mainForm.checkLogEnabled.Checked = myAppSettings.checkLogEnabled;
 			_mainForm.checkHideConfidentialInfo.Checked = myAppSettings.checkHideConfidentialInfo;
 			_mainForm.checkRequestScrap.Checked = myAppSettings.checkRequestScrap;

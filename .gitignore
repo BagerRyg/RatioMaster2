@@ -6,6 +6,9 @@ SECURITY_AUDIT_REPORT.md
 SECURITY_AUDIT_NOTES.md
 autidt_plan.md
 **/obj/
+*.pdb
+*.mdb
+*.dmp
 *.log
 **/bin/
 .env

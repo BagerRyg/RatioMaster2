@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -26,12 +27,72 @@ internal class TorrentClientsEnum
 
 	private static readonly string[] pinnedClientFiles =
 	{
-		"uTorrent_3.6.0_build_47196.client",
-		"BitTorrent_7.11.0_build_47235.client",
-		"qBittorrent_5.2.1.client",
+		"uTorrent_3.6.0_build_47254.client",
+		"BitTorrent_7.11.0_build_47255.client",
+		"qBittorrent_5.2.3.client",
 		"Vuze_5.7.7.0.client",
 		"Deluge_2.2.0.client",
-		"rTorrent_ruTorrent_0.16.12_5.3.1.client"
+		"rTorrent_ruTorrent_0.16.22_5.3.14.client",
+		"Transmission_4.1.3.client",
+		"Halite_0.4.0.4.client",
+		"BitTyrant_1.1.1.client"
+	};
+
+	// Build 74 saved dropdown positions, including its divider. Keep this order for migration.
+	private static readonly string[] legacyClientIds =
+	{
+		"uTorrent_3.6.0_build_47196.client",
+		"BitTorrent_7.11.0_build_47235.client",
+		"qBittorrent_5.2.3.client",
+		"Vuze_5.7.7.0.client",
+		"Deluge_2.2.0.client",
+		"rTorrent_ruTorrent_0.16.12_5.3.1.client",
+		"",
+		"Azureus_3050.client",
+		"BitComet0107.client",
+		"BitComet0113.client",
+		"bitlord_1.1.client",
+		"BitSpirit_v3.5.0.275.client",
+		"BitTorrent 6.0.3 (8642).client",
+		"BitTyrant_1.1.client",
+		"burst_310b.client",
+		"Deluge_1.1.7.client",
+		"Deluge_1.1.9.client",
+		"Halite 0.3.1.1.client",
+		"qBittorrent_5.2.1.client",
+		"Transmission_1.06_Build_5136.client",
+		"utorrent_1.7.7_build_(8179).client",
+		"utorrent_1.8.1_(build_12616).client",
+		"utorrent_1.8.1_(build_12639).client",
+		"utorrent_1.8.2_(build_15227).client",
+		"utorrent_1.8.2_(build_15296).client",
+		"utorrent_1.8.2_(build_15357).client",
+		"utorrent_1.8.2_build(14153).client",
+		"utorrent_1.8.2_build(14458).client",
+		"utorrent_1.8.2_build_15167.client",
+		"uTorrent_1.8.3_(build_15772).client",
+		"uTorrent_1.8.3_(build_16010).client",
+		"utorrent_1.8.3_build_15728.client",
+		"uTorrent_1.8.4_(build_16286).client",
+		"uTorrent_1.8.4_(build_16301).client",
+		"utorrent_1.8.4_(build_16667).client",
+		"utorrent_1.8.4_(build_16688).client",
+		"utorrent_1.8.4_build_(16150).client",
+		"utorrent_1.8.5_(build_17091).client",
+		"utorrent_1.8.5_(build_17414).client",
+		"utorrent_1.8_(build_11813).client",
+		"utorrent_2.0.4_(build_21586).client",
+		"utorrent_2.0.4_build_21431.client",
+		"utorrent_2.0.4_build_21515.client",
+		"Vuze_4202.client",
+		"Vuze_4204.client",
+		"Vuze_4208.client",
+		"Vuze_4306.client",
+		"Vuze_4404-Fixed.client",
+		"Vuze_4500-Fixed.client",
+		"internal:Azureus 2.4.0.2",
+		"internal:uTorrent 1.6.1  (build 490)",
+		"internal:BitComet 0.70"
 	};
 
 	public TorrentClient[] TorrentClients => _torrentClients;
@@ -41,25 +102,55 @@ internal class TorrentClientsEnum
 		_mainForm = MainForm;
 		internalClients = EnumerateInternalClients();
 		externalClients = EnumerateExternalClients();
-		_torrentClients = new TorrentClient[externalClients.Length + internalClients.Length + 1];
-		int num = 0;
+		List<TorrentClient> clients = new List<TorrentClient>();
+		bool dividerAdded = false;
 		for (int i = 0; i < externalClients.Length; i++)
 		{
-			if (i == pinnedClientFiles.Length)
+			if (!dividerAdded && GetPinnedClientRank(externalClients[i].ProfileId) == pinnedClientFiles.Length)
 			{
-				_torrentClients[num] = new TorrentClient("----- Legacy -----")
+				clients.Add(new TorrentClient("----- Legacy -----")
 				{
 					IsDivider = true
-				};
-				num++;
+				});
+				dividerAdded = true;
 			}
-			_torrentClients[num] = externalClients[i];
-			num++;
+			clients.Add(externalClients[i]);
+		}
+		if (!dividerAdded && internalClients.Length > 0)
+		{
+			clients.Add(new TorrentClient("----- Legacy -----") { IsDivider = true });
 		}
 		for (int i = 0; i < internalClients.Length; i++)
 		{
-			_torrentClients[num + i] = internalClients[i];
+			internalClients[i].ProfileId = "internal:" + internalClients[i].Name;
+			clients.Add(internalClients[i]);
 		}
+		_torrentClients = clients.ToArray();
+	}
+
+	internal static int ResolveClientIndex(TorrentClient[] clients, string profileId, int legacyIndex)
+	{
+		if (string.IsNullOrEmpty(profileId) && legacyIndex >= 0 && legacyIndex < legacyClientIds.Length)
+		{
+			profileId = legacyClientIds[legacyIndex];
+		}
+		int fallback = -1;
+		for (int i = 0; i < clients.Length; i++)
+		{
+			if (clients[i] == null || clients[i].IsDivider)
+			{
+				continue;
+			}
+			if (fallback < 0 || clients[i].ProfileId == "qBittorrent_5.2.3.client")
+			{
+				fallback = i;
+			}
+			if (!string.IsNullOrEmpty(profileId) && string.Equals(clients[i].ProfileId, profileId, StringComparison.OrdinalIgnoreCase))
+			{
+				return i;
+			}
+		}
+		return fallback;
 	}
 
 	private TorrentClient[] EnumerateInternalClients()
@@ -151,6 +242,7 @@ internal class TorrentClientsEnum
 			}
 			XmlNode xmlNode = xmlDocument.SelectSingleNode("//client");
 			externalClients[num] = new TorrentClient(getAttribute(xmlNode, "name") + " (author " + getAttribute(xmlNode, "author") + ", ver. " + getAttribute(xmlNode, "version") + ")");
+			externalClients[num].ProfileId = Path.GetFileName(text);
 			externalClients[num].ProcessName = getAttribute(xmlNode, "processname");
 			XmlNode xmlNode2 = xmlNode.SelectSingleNode("query");
 			externalClients[num].Query = xmlNode2.InnerText;
@@ -292,17 +384,19 @@ internal class TorrentClientsEnum
 			"alphabetic" => stringGenerator.Generate(keyLength, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray()), 
 			"alphanumeric" => stringGenerator.Generate(keyLength), 
 			"numeric" => stringGenerator.Generate(keyLength, "0123456789".ToCharArray()), 
-			"qbittorrent" => stringGenerator.Generate(keyLength, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_~()!.*-".ToCharArray()), 
+			"qbittorrent" or "libtorrent" => stringGenerator.Generate(keyLength, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_~()!.*-".ToCharArray()),
+			"transmission" => GenerateTransmissionSuffix(keyLength),
 			"random" => stringGenerator.Generate(keyLength, randomness: true), 
 			"hex" => stringGenerator.Generate(keyLength, "0123456789abcdef".ToCharArray()), 
+			"hexVariable" => GenerateVariableHex(keyLength),
 			"hexNoLeadingZero" => stringGenerator.Generate(1, "123456789abcdef".ToCharArray()) + stringGenerator.Generate(keyLength - 1, "0123456789abcdef".ToCharArray()), 
 			_ => stringGenerator.Generate(keyLength), 
 		};
-		if (upperCase)
+		if (upperCase && keyType != "random")
 		{
 			text = text.ToUpper();
 		}
-		else if (lowerCase)
+		else if (lowerCase && keyType != "random")
 		{
 			text = text.ToLower();
 		}
@@ -311,6 +405,31 @@ internal class TorrentClientsEnum
 			text = stringGenerator.urlEncode(text, urlEncodingExceptions, upperCase, lowerCase);
 		}
 		return text;
+	}
+
+	private string GenerateTransmissionSuffix(int length)
+	{
+		if (length != 12)
+		{
+			throw new InvalidDataException("Transmission peer IDs require a 12-character suffix.");
+		}
+		const string alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+		char[] suffix = new char[length];
+		int sum = 0;
+		for (int i = 0; i < length - 1; i++)
+		{
+			int value = random.Next(256) % alphabet.Length;
+			suffix[i] = alphabet[value];
+			sum += value;
+		}
+		suffix[length - 1] = alphabet[(alphabet.Length - sum % alphabet.Length) % alphabet.Length];
+		return new string(suffix);
+	}
+
+	private string GenerateVariableHex(int length)
+	{
+		string value = stringGenerator.Generate(length, "0123456789abcdef".ToCharArray()).TrimStart('0');
+		return value.Length == 0 ? "0" : value;
 	}
 
 	private string GenerateIdString(string keyType, int keyLength, bool urlencoding, bool upperCase, string urlEncodingExceptions)

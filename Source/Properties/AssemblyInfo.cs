@@ -13,4 +13,5 @@ using System.Runtime.Versioning;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyDelaySign(false)]
 [assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.75")]
 [assembly: SupportedOSPlatform("windows7.0")]

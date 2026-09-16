@@ -2,6 +2,8 @@ namespace RatioMaster;
 
 public class TorrentClient
 {
+	public string ProfileId { get; set; }
+
 	private string _Name;
 
 	private string _Query;

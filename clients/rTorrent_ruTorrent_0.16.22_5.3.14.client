@@ -1,0 +1,11 @@
+<!-- rakshasa/rtorrent and rakshasa/libtorrent v0.16.22. ruTorrent is the Web UI, not the wire identity. -->
+<client name="rTorrent 0.16.22 / ruTorrent 5.3.14" author="RygTech" version="1.0" processname="rtorrent">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;compact=1&amp;key={key}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}{event}</query>
+  <headers>Host: {host}_nl_User-Agent: rtorrent/0.16.22_nl_Accept: */*_nl_Accept-Encoding: deflate, gzip_nl_</headers>
+  <peer_id prefix="-lt1016-" type="random" length="12" urlencoding="true" upperCase="false" />
+  <key type="hex" length="8" urlencoding="false" lowerCase="true" />
+  <protocol value="HTTP/1.1" />
+  <hash upperCase="false" />
+  <urlencoding exceptions="-" />
+  <numwant value="50" randomize="false" />
+</client>

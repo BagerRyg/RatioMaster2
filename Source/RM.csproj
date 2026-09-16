@@ -9,6 +9,12 @@
   <PropertyGroup>
     <LangVersion>12.0</LangVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Optimize>true</Optimize>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src</PathMap>
+  </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>

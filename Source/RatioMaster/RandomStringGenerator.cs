@@ -32,7 +32,7 @@ public class RandomStringGenerator
 		{
 			if (randomness)
 			{
-				stringBuilder.Append((char)randNum.Next(255));
+				stringBuilder.Append((char)randNum.Next(256));
 			}
 			else
 			{

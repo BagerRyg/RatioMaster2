@@ -1,0 +1,11 @@
+<!-- Official 2007-09-07 release retains AZ2500BT and the Azureus 2.5.0.0BitTyrant identity. -->
+<client name="BitTyrant 1.1.1" author="RygTech" version="1.0" processname="Azureus">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;supportcrypto=1&amp;port={port}&amp;azudp={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}{event}&amp;numwant={numwant}&amp;no_peer_id=1&amp;compact=1&amp;key={key}</query>
+  <headers>User-Agent: AzureusBitTyrant 2.5.0.0BitTyrant;{osver};{javaver}_nl_Connection: close_nl_Accept-Encoding: gzip_nl_Host: {host}_nl_Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2_nl_</headers>
+  <peer_id prefix="AZ2500BT" type="alphanumeric" length="12" urlencoding="false" />
+  <key type="alphanumeric" length="8" urlencoding="false" />
+  <protocol value="HTTP/1.1" />
+  <hash upperCase="true" />
+  <urlencoding exceptions="*-._" />
+  <numwant value="100" randomize="false" />
+</client>

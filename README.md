@@ -47,7 +47,7 @@ RatioMaster 2.0 introduces a new set of features, improvements, and changes:
 * Improved UI, with the addition of Dark Mode.
 * Updated framework from old .NET 8 -> .NET 10
 * Improved stability and security.
-* Added new, up-to-date torrent clients, such as qBittorrent 5.2.1, uTorrent 3.6.0, BitTorrent 7.11.0, Vuze 5.7.7.0, Deluge 2.2.0, and rTorrent 0.16.12 / ruTorrent 5.3.1.
+* Client profiles include qBittorrent 5.2.3, uTorrent 3.6.0 (47254), BitTorrent 7.11.0 (47255), Deluge 2.2.0, rTorrent 0.16.22 / ruTorrent 5.3.14, Transmission 4.1.3, Halite 0.4.0.4, and BitTyrant 1.1.1. See the [client audit](docs/CLIENTS.md) for sources and verification limits.
 * Improved tracker/announce response.
 * Torrent files containing multiple announce URLs are now supported correctly and working.
 * Fixed an issue where the client could stall for up to 15 minutes before updating the tracker.
@@ -82,6 +82,14 @@ dotnet publish ".\Source\RM.csproj" -c Release -r win-x64 --self-contained false
 ```
 
 Replace `Build X` with the next numbered build folder.
+
+For a self-contained build that does not require an installed .NET runtime:
+
+```powershell
+dotnet publish ".\Source\RM.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false -o ".\Build X\Standalone"
+```
+
+Keep the generated `clients`, `lng`, and `ratiomaster.config` beside `RM.exe`. Release builds disable debug symbols and map source paths to a generic location. Build output, debug files, logs, and local torrent settings are excluded from Git.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

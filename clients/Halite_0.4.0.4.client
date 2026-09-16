@@ -1,0 +1,11 @@
+<!-- Eoinocal/Halite Release-0.4.0.4, bundled libtorrent 1.0.7. -->
+<client name="Halite 0.4.0.4" author="RygTech" version="1.0" processname="Halite">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;corrupt=0&amp;key={key}{event}&amp;numwant={numwant}&amp;compact=1&amp;no_peer_id=1&amp;supportcrypto=1&amp;redundant=0</query>
+  <headers>Host: {host}_nl_User-Agent: Halite v 0.4.0.4_nl_Accept-Encoding: gzip_nl_Connection: close_nl_</headers>
+  <peer_id prefix="-HL0404-" type="libtorrent" length="12" urlencoding="false" />
+  <key type="hexVariable" length="8" urlencoding="false" upperCase="true" />
+  <protocol value="HTTP/1.1" />
+  <hash upperCase="false" />
+  <urlencoding exceptions="_~()!.*-" />
+  <numwant value="200" randomize="false" />
+</client>

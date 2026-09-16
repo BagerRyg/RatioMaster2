@@ -1,0 +1,11 @@
+<!-- transmission/transmission 4.1.3: default encryption, zero corrupt bytes, HTTP/1.1 with gzip/deflate. -->
+<client name="Transmission 4.1.3" author="RygTech" version="1.0" processname="transmission-qt">
+  <query>info_hash={infohash}&amp;peer_id={peerid}&amp;port={port}&amp;uploaded={uploaded}&amp;downloaded={downloaded}&amp;left={left}&amp;numwant={numwant}&amp;key={key}&amp;compact=1&amp;supportcrypto=1{event}</query>
+  <headers>Host: {host}_nl_User-Agent: Transmission/4.1.3_nl_Accept: */*_nl_Accept-Encoding: deflate, gzip_nl_</headers>
+  <peer_id prefix="-TR4130-" type="transmission" length="12" urlencoding="false" />
+  <key type="hex" length="8" urlencoding="false" upperCase="true" />
+  <protocol value="HTTP/1.1" />
+  <hash upperCase="true" />
+  <urlencoding exceptions="-._~" />
+  <numwant value="80" randomize="false" />
+</client>

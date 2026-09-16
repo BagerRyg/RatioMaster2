@@ -388,6 +388,8 @@ public class MainForm : Form
 
 	private bool stopParamsUpdateInProgress;
 
+	private long randomizedSeedRatioStopTarget;
+
 	private bool TestNetworkInProgress;
 
 	private FormStartPosition initialStartPosition = FormStartPosition.CenterScreen;
@@ -791,7 +793,7 @@ public class MainForm : Form
 		this.versionAboutLabel.Name = "versionAboutLabel";
 		this.versionAboutLabel.Size = new System.Drawing.Size(520, 25);
 		this.versionAboutLabel.TabIndex = 1;
-		this.versionAboutLabel.Text = "Build 73 using .NET 10.0";
+		this.versionAboutLabel.Text = "Build 75 using .NET 10.0";
 		this.versionAboutLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 		this.label2.AutoSize = false;
 		this.label2.BackColor = System.Drawing.Color.Transparent;
@@ -1456,7 +1458,7 @@ public class MainForm : Form
 		this.stopProcessUnitsBox.Visible = false;
 		this.stopProcessActionBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
 		this.stopProcessActionBox.FormattingEnabled = true;
-		this.stopProcessActionBox.Items.AddRange(new object[5] { "Do not stop", "Uploaded", "Downloaded", "Time", "Seeded 1.2x" });
+		this.stopProcessActionBox.Items.AddRange(new object[5] { "Do not stop", "Uploaded", "Downloaded", "Time", "Seeded ~1.2x" });
 		this.stopProcessActionBox.Location = new System.Drawing.Point(174, 88);
 		this.stopProcessActionBox.Name = "stopProcessActionBox";
 		this.stopProcessActionBox.Size = new System.Drawing.Size(150, 21);
@@ -1714,7 +1716,7 @@ public class MainForm : Form
 	{
 		applicationSettings = new ApplicationSettings(this);
 		TorrentClientsObj = new TorrentClientsEnum(this);
-		versionAboutLabel.Text = "Build 73 using .NET 10.0";
+		versionAboutLabel.Text = "Build 75 using .NET 10.0";
 		InitLocalization();
 		deployDefaultValues();
 		TorrentClientsBox_SelectedIndexChanged(null, null);
@@ -1897,7 +1899,7 @@ public class MainForm : Form
 		stopProcessActionBox.Items[1] = lclzManager.TranslateMessage("stopProcessOpt2", "Uploaded");
 		stopProcessActionBox.Items[2] = lclzManager.TranslateMessage("stopProcessOpt3", "Downloaded");
 		stopProcessActionBox.Items[3] = lclzManager.TranslateMessage("stopProcessOpt4", "Time");
-		stopProcessActionBox.Items[4] = lclzManager.TranslateMessage("stopProcessOpt5", "Seeded 1.2x");
+		stopProcessActionBox.Items[4] = lclzManager.TranslateMessage("stopProcessOpt5", "Seeded ~1.2x");
 		restoreToolStripMenuItem.Text = lclzManager.TranslateMessage("restoreToolStripMenuItem", "Restore");
 		exitToolStripMenuItem.Text = lclzManager.TranslateMessage("exitToolStripMenuItem", "Exit");
 		comboBindIp.Items[0] = new KeyValuePair("default", lclzManager.TranslateMessage("defaultBinding", "Default"));
@@ -2234,6 +2236,7 @@ public class MainForm : Form
 	private void StartButton_Click(object sender, EventArgs e)
 	{
 		seedMode = false;
+		randomizedSeedRatioStopTarget = 0L;
 		currentClient = getCurrentClient();
 		currentProxy = GetCurrentProxy();
 		currentTorrent = getCurrentTorrent();
@@ -2441,7 +2444,7 @@ public class MainForm : Form
 		comboProxyType.SelectedIndex = 0;
 		stopProcessActionBox.SelectedIndex = 0;
 		applicationSettings.LoadAppSettings();
-		SelectTorrentClientByName("qBittorrent 5.2.1");
+		SelectTorrentClientByName("qBittorrent 5.2.3");
 	}
 
 	private ProxyInfo GetCurrentProxy()
@@ -3615,6 +3618,11 @@ public class MainForm : Form
 		}
 	}
 
+	public void RestoreTorrentClientSelection(string profileId, int legacyIndex)
+	{
+		TorrentClientsBox.SelectedIndex = TorrentClientsEnum.ResolveClientIndex(TorrentClients, profileId, legacyIndex);
+	}
+
 	public string getValueDefault(string value, string defValue)
 	{
 		if (value == "")
@@ -3931,24 +3939,34 @@ public class MainForm : Form
 			result = ((totalRunningTimeCounter > num) ? true : false);
 			break;
 		case 4:
-			long seedTarget = GetSeededOnePointTwoTarget();
+			long seedTarget = GetRandomizedSeedRatioStopTarget();
 			result = seedTarget > 0 && currentTorrent.uploaded >= seedTarget;
 			break;
 		}
 		return result;
 	}
 
-	private long GetSeededOnePointTwoTarget()
+	private long GetRandomizedSeedRatioStopTarget()
 	{
+		if (randomizedSeedRatioStopTarget > 0)
+		{
+			return randomizedSeedRatioStopTarget;
+		}
 		if (currentTorrentFile == null || currentTorrentFile.totalLength <= 0)
 		{
 			return 0L;
 		}
-		if (currentTorrentFile.totalLength > long.MaxValue / 12L)
+		int ratioPercent = random.Next(118, 126);
+		decimal target = Math.Ceiling(currentTorrentFile.totalLength * ratioPercent / 100m);
+		if (target >= long.MaxValue)
 		{
-			return long.MaxValue;
+			randomizedSeedRatioStopTarget = long.MaxValue;
 		}
-		return (currentTorrentFile.totalLength * 12L + 9L) / 10L;
+		else
+		{
+			randomizedSeedRatioStopTarget = (long)target;
+		}
+		return randomizedSeedRatioStopTarget;
 	}
 
 	private long GetStopProcessUnitsMultiplyer()
