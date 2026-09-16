@@ -20,6 +20,22 @@
   </p>
 </div>
 
+## Latest Release: Build 75
+
+September 16, 2026. App build **75**, executable version **2.0.0.75**.
+
+Changes since Build 73:
+
+* Added client profiles for qBittorrent 5.2.3, uTorrent 3.6.0 (47254), BitTorrent 7.11.0 (47255), rTorrent 0.16.22 / ruTorrent 5.3.14, Transmission 4.1.3, Halite 0.4.0.4, and BitTyrant 1.1.1. qBittorrent 5.2.3 is the default.
+* Updated affected announce templates, headers, peer-ID generation, and key formats, including fixes for existing qBittorrent and Deluge profiles. Historical profiles remain under Legacy. See the [client audit](docs/CLIENTS.md) for verification limits and clients still awaiting verified updates.
+* Saved client selections now use stable profile IDs so database reordering does not change the selected client. Added migration for older index-based settings and fallback handling for missing profiles.
+* Changed **Seeded ~1.2x** to choose one random target per session between **1.18x and 1.25x** the torrent's total size. The stop condition uses reported uploaded bytes, not actual transferred torrent data.
+* Updated the stop-option text across all **24 language locales**.
+* Added offline regression tests covering **57 client profiles**, request formatting, generated IDs and keys, and saved-selection migration. Tests send no tracker requests.
+* Disabled release debug symbols and mapped source paths to a generic location. Release optimization is enabled and the `DEBUG` compilation flag is absent. Removed old Build 73 output from Git tracking; generated builds, debug files, logs, and local torrent settings are excluded. Previously committed files remain in Git history.
+
+Build 75 supports a self-contained Windows x64 EXE that needs no installed .NET runtime. See [Build From Source](#build-from-source); keep the accompanying client, language, and default-config files beside the EXE.
+
 ## Introduction
 
 RatioMaster 2.0 is an improved and modified version of RatioMaster v1.9.1. The application was modernized by decompiling the original RatioMaster v1.9.1 source by Ratiomaster_06/Moofdev, then updating and extending it.
@@ -52,6 +68,7 @@ RatioMaster 2.0 introduces a new set of features, improvements, and changes:
 * Torrent files containing multiple announce URLs are now supported correctly and working.
 * Fixed an issue where the client could stall for up to 15 minutes before updating the tracker.
 * Improved logging tab.
+* **Hide confidential info** masks sensitive tracker values, peer IDs, hashes, and keys in the log view and its saved output when enabled. It is enabled by default.
 * Removed the auto-update function, as it was hitting a dead endpoint anyway.
 * Many other minor tweaks and improvements.
 
@@ -67,7 +84,7 @@ RatioMaster 2.0 introduces a new set of features, improvements, and changes:
 
 ## Getting Started
 
-Download the latest build from the repository releases or build it from source with the .NET SDK.
+Build the current release from source with the .NET SDK. Generated executable builds are not tracked in the source repository.
 
 ### Prerequisites
 
